@@ -2,6 +2,7 @@ services:
   # Backend API
   - type: web
     name: finx-backend
+    plan: free
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
@@ -15,6 +16,7 @@ services:
   # Frontend Web App
   - type: web
     name: finx-frontend
+    plan: free
     env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
