@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --font-main: 'Inter', sans-serif;
+  
+  --bg-color: #fcece3; /* Soft beige/peach */
+  --bg-gradient: radial-gradient(at 0% 0%, hsla(253, 16%, 87%, 1) 0, transparent 50%), 
+                 radial-gradient(at 50% 0%, hsla(28, 54%, 86%, 1) 0, transparent 50%), 
+                 radial-gradient(at 100% 0%, hsla(11, 74%, 84%, 1) 0, transparent 50%);
+                 
+  --accent-orange: #c04818;
+  --accent-orange-hover: #a13d14;
+  --accent-green: #064e3b;
+  --text-dark: #1f2937;
+  --text-muted: #6b7280;
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --card-border: rgba(255, 255, 255, 0.4);
+  --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-main);
+}
+
+body {
+  background-color: var(--bg-color);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-dark);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Add subtle noise texture if possible via CSS, or keep it clean */
+}
+
+/* Glassmorphism Card Utility */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 500px;
+  margin: 2rem auto;
+}
+
+/* Base Typo */
+h1, h2, h3 {
+  color: var(--text-dark);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Standardized Button */
+.btn-primary {
+  width: 100%;
+  background-color: var(--accent-orange);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1.5rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--accent-orange-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(192, 72, 24, 0.2);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Form Styling */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.5);
+  color: var(--text-dark);
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-orange);
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 3px rgba(192, 72, 24, 0.1);
+}
+
+/* Checkbox styling */
+.checkbox-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.checkbox-wrap input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  accent-color: var(--accent-orange);
+}
+
+/* Custom Range Slider */
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  cursor: pointer;
+  margin-top: -10px;
+  box-shadow: 0 2px 6px rgba(6, 78, 59, 0.3);
+}
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: rgba(0,0,0,0.1);
+  border-radius: 10px;
+}
+input[type=range]:focus {
+  outline: none;
+}
