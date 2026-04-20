@@ -1,0 +1,27 @@
+services:
+  # Backend API
+  - type: web
+    name: finx-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.13
+      - key: JWT_SECRET_KEY
+        generateValue: true
+
+  # Frontend Web App
+  - type: web
+    name: finx-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: finx-backend
+          envVarKey: RENDER_EXTERNAL_URL
