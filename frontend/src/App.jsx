@@ -14,6 +14,8 @@ import { History } from './pages/user/History';
 import Eligibility from './pages/user/Eligibility';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminAppDetails from './pages/admin/AdminAppDetails';
 
 // Mock Auth Context (we will implement properly in contexts/)
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -48,7 +50,9 @@ function App() {
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
           {/* Admin Routes */}
-          <Route path="/admin/*" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/application/:id" element={<ProtectedRoute adminOnly={true}><AdminAppDetails /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

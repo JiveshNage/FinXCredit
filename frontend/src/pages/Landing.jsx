@@ -35,6 +35,24 @@ const Landing = () => {
         </div>
       </nav>
 
+      {/* Live Activity Ticker */}
+      <div style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-subtle)', borderTop: '1px solid var(--border-subtle)', padding: '12px 0', overflow: 'hidden', whiteSpace: 'nowrap', position: 'relative', zIndex: 10 }}>
+         <motion.div 
+           animate={{ x: [0, -1000] }}
+           transition={{ ease: "linear", duration: 30, repeat: Infinity }}
+           style={{ display: 'inline-flex', alignItems: 'center', gap: '50px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}
+         >
+           {[...Array(3)].map((_, i) => (
+             <React.Fragment key={i}>
+               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="var(--status-success)" /> Rakesh from Mumbai secured ₹50,000</span>
+               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="var(--status-success)" /> Priya from Bangalore secured ₹1,20,000</span>
+               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><Activity size={14} color="var(--brand-primary)" /> Deepak completed KYC in 2 mins</span>
+               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="var(--status-success)" /> Suresh from Pune secured ₹35,000</span>
+             </React.Fragment>
+           ))}
+         </motion.div>
+      </div>
+
       {/* Hero Section */}
       <section style={{ padding: '100px 5%', position: 'relative', zIndex: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '60px', alignItems: 'center', maxWidth: '1400px', margin: '0 auto' }}>
         
@@ -151,29 +169,29 @@ const Landing = () => {
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', maxWidth: '1200px', margin: '0 auto' }}>
-          <div className="glass-card" style={{ textAlign: 'center', padding: '40px 30px' }}>
+          <motion.div whileHover={{ y: -10 }} className="glass-card" style={{ textAlign: 'center', padding: '40px 30px' }}>
             <div style={{ width: '60px', height: '60px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--brand-primary)' }}>
               <Smartphone size={30} />
             </div>
             <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>1. E-KYC & Profile</h3>
             <p style={{ color: 'var(--text-secondary)' }}>Complete a quick 2-minute digital KYC using your Aadhaar or PAN. No paperwork required.</p>
-          </div>
+          </motion.div>
           
-          <div className="glass-card" style={{ textAlign: 'center', padding: '40px 30px' }}>
+          <motion.div whileHover={{ y: -10 }} className="glass-card" style={{ textAlign: 'center', padding: '40px 30px' }}>
             <div style={{ width: '60px', height: '60px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--brand-secondary)' }}>
               <Lock size={30} />
             </div>
             <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>2. Secure Data Sync</h3>
             <p style={{ color: 'var(--text-secondary)' }}>We securely analyze your SMS and bank statements via the RBI-regulated Account Aggregator network.</p>
-          </div>
+          </motion.div>
 
-          <div className="glass-card" style={{ textAlign: 'center', padding: '40px 30px' }}>
+          <motion.div whileHover={{ y: -10 }} className="glass-card" style={{ textAlign: 'center', padding: '40px 30px' }}>
             <div style={{ width: '60px', height: '60px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--status-success)' }}>
               <Zap size={30} />
             </div>
             <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>3. Instant Approval</h3>
             <p style={{ color: 'var(--text-secondary)' }}>Our AI Engine instantly scores your alternate data and disburses funds directly to your bank.</p>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -202,6 +220,44 @@ const Landing = () => {
               <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>App Rating</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" style={{ padding: '80px 5%', position: 'relative', zIndex: 10, maxWidth: '1200px', margin: '0 auto', scrollMarginTop: '80px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <h2 style={{ fontSize: '3rem', marginBottom: '16px' }}>Real Stories, <span className="text-gradient">Real Impact</span></h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>See how we are transforming the lives of informal workers across India.</p>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
+          <motion.div whileHover={{ y: -10 }} className="glass-card" style={{ padding: '30px' }}>
+            <div style={{ display: 'flex', gap: '4px', color: '#f59e0b', marginBottom: '16px' }}>
+               {[...Array(5)].map((_, i) => <svg key={i} width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}
+            </div>
+            <p style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>"No bank would give me a loan because I don't have a salary slip. CreditBridge looked at my UPI transactions and approved ₹50,000 for my new delivery bike in 5 minutes."</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>A</div>
+               <div>
+                 <div style={{ fontWeight: 600 }}>Arjun Patel</div>
+                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Delivery Partner, Mumbai</div>
+               </div>
+            </div>
+          </motion.div>
+
+          <motion.div whileHover={{ y: -10 }} className="glass-card" style={{ padding: '30px' }}>
+            <div style={{ display: 'flex', gap: '4px', color: '#f59e0b', marginBottom: '16px' }}>
+               {[...Array(5)].map((_, i) => <svg key={i} width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}
+            </div>
+            <p style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>"The digital KYC was so easy. I just linked my bank account, and the AI calculated my score instantly. I got the working capital I needed to expand my street food stall."</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--status-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>M</div>
+               <div>
+                 <div style={{ fontWeight: 600 }}>Meena Devi</div>
+                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Street Vendor, Delhi</div>
+               </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 

@@ -1,91 +1,114 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, FileCheck, Landmark, CheckCircle, Loader } from 'lucide-react';
+import { Shield, FileCheck, Landmark, UploadCloud, UserCircle, Loader } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar } from './Dashboard';
 import { API_BASE_URL } from '../../config';
 
 const Apply = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [step, setStep] = useState(2);
+  const { token } = useAuth();
+  const [step, setStep] = useState(1);
   const [error, setError] = useState(null);
-  
-  // KYC State
-  const [kycData, setKycData] = useState({
-    pan_number: '',
-    aadhaar_number: ''
-  });
-  
-  // Consent State
-  const [conAA, setConAA] = useState(false);
-  const [conCibil, setConCibil] = useState(false);
-  
-  // Submission
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
+  
+  // KYC Files
+  const [panFile, setPanFile] = useState(null);
+  const [aadhaarFile, setAadhaarFile] = useState(null);
+  const [bankFile, setBankFile] = useState(null);
+  
+  // Self Declaration
+  const [declaredIncome, setDeclaredIncome] = useState("");
+  const [declaredExpenses, setDeclaredExpenses] = useState("");
 
-  const handleKYCSubmit = async (e) => {
+  const handlePanUpload = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setError("You must be logged in to proceed. Please log in and try again.");
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    setLoadingText("Verifying Identity with UIDAI & NSDL...");
+    if (!panFile) { setError("Please upload a PAN card image."); return; }
+    
+    setError(null); setLoading(true); setLoadingText("Running OCR on PAN Image...");
+    const formData = new FormData();
+    formData.append("file", panFile);
     
     try {
-      const res = await fetch(`${API_BASE_URL}/api/applications/kyc-submit`, {
+      const res = await fetch(`${API_BASE_URL}/api/applications/upload/pan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(kycData)
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
       });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || "KYC Failed: Could not validate credentials. Please check your login status.");
-      }
+      if (!res.ok) throw new Error((await res.json()).detail || "PAN OCR Verification Failed");
       setStep(2);
-    } catch (err) {
-      setError(err.message);
-    }
-    setLoading(false);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  const handleDecisionSubmit = async (e) => {
+  const handleAadhaarUpload = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setError("You must be logged in to proceed. Please log in and try again.");
-      return;
-    }
-    if (!conAA || !conCibil) {
-      setError("Explicit consent is required by Law to proceed.");
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    
-    // Simulate complex pipeline loading visuals
-    setLoadingText("Initializing Account Aggregator Framework...");
-    setTimeout(() => setLoadingText("Fetching Digitally Signed Bank Statements..."), 2000);
-    setTimeout(() => setLoadingText("Running CIBIL Bureau Diagnostics..."), 4000);
-    setTimeout(() => setLoadingText("Running Heuristics & XGBoost ML Override..."), 6000);
+    if (!aadhaarFile) { setError("Please upload Aadhaar Offline XML zip."); return; }
+
+    setError(null); setLoading(true); setLoadingText("Parsing Aadhaar XML & Verifying Signature...");
+    const formData = new FormData();
+    formData.append("file", aadhaarFile);
     
     try {
-      const res = await fetch(`${API_BASE_URL}/api/applications/calculate`, {
+      const res = await fetch(`${API_BASE_URL}/api/applications/upload/aadhaar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ consent_aa: conAA, consent_cibil: conCibil })
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
       });
-      if (!res.ok) {
-         const d = await res.json();
-         throw new Error(d.detail || "Eligibility Check Failed: Could not validate credentials. Please check your login status.");
-      }
-      const data = await res.json();
+      if (!res.ok) throw new Error((await res.json()).detail || "Aadhaar XML Verification Failed");
+      setStep(3);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+  
+  const handleDeclarationSubmit = (e) => {
+    e.preventDefault();
+    if (!declaredIncome || !declaredExpenses) {
+        setError("Please declare your financials."); return;
+    }
+    setStep(4);
+  }
+
+  const handleFinalSubmit = async (e) => {
+    e.preventDefault();
+    if (!bankFile) {
+      setError("Please upload your bank statement CSV.");
+      return;
+    }
+    setError(null); setLoading(true);
+    setLoadingText("Parsing Bank CSV and Running NLP Transaction Categorizer...");
+    
+    try {
+      // 1. Upload Bank CSV
+      const formData = new FormData();
+      formData.append("file", bankFile);
       
-      setTimeout(() => navigate(`/results/${data.application_id}`), 7000);
+      let res = await fetch(`${API_BASE_URL}/api/applications/upload/bank`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "Bank statement parsing failed");
+      
+      setLoadingText("Running ML Discrepancy & Eligibility Models...");
+      
+      // 2. Submit Application (with declared financials)
+      res = await fetch(`${API_BASE_URL}/api/applications/calculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ 
+            consent_aa: true, 
+            consent_cibil: true,
+            declared_income: parseFloat(declaredIncome),
+            declared_expenses: parseFloat(declaredExpenses)
+        })
+      });
+      
+      if (!res.ok) throw new Error((await res.json()).detail || "Eligibility Check Failed");
+      
+      const data = await res.json();
+      setTimeout(() => navigate(`/results/${data.application_id}`), 2000);
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -105,104 +128,144 @@ const Apply = () => {
         {loading ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: '60px', marginTop: '10vh', maxWidth: '600px', margin: '10vh auto 0' }}>
             <Loader size={48} color="var(--brand-primary)" style={{ animation: 'spin 2s linear infinite', marginBottom: '20px' }} />
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Processing Eligibility Check</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Processing Details</h3>
             <p style={{ color: 'var(--text-secondary)' }}>{loadingText}</p>
             <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
           </div>
         ) : (
           <div style={{ maxWidth: '600px', margin: '0 auto' }}>
             <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '8px' }}>Eligibility Check</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>RBI Compliant e-KYC Verification Process</p>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '8px' }}>New Loan Application</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Advanced Document ML Verification</p>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginBottom: '40px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
-               <div style={{ flex: 1, textAlign: 'center', opacity: 1 }}>
-                  <div style={{ background: 'var(--brand-gradient)', borderRadius: '50%', width: '40px', height: '40px', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>1</div>
-                  <div style={{ fontWeight: 600 }}>Consent for Eligibility</div>
-               </div>
+               {[1, 2, 3, 4].map(s => (
+                   <div key={s} style={{ flex: 1, textAlign: 'center', opacity: step >= s ? 1 : 0.4 }}>
+                      <div style={{ background: step >= s ? 'var(--brand-gradient)' : 'var(--bg-dark)', borderRadius: '50%', width: '30px', height: '30px', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px' }}>{s}</div>
+                   </div>
+               ))}
             </div>
 
             <div className="glass-card">
         {error && <div className="error-box" style={{ marginBottom: '20px', color: 'red' }}>{error}</div>}
 
         {step === 1 && (
-          <form onSubmit={handleKYCSubmit}>
+          <form onSubmit={handlePanUpload}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                 <Shield color="var(--brand-primary)" />
-                <h3 style={{ margin: 0 }}>Government ID Verification</h3>
+                <h3 style={{ margin: 0 }}>Step 1: PAN OCR Verification</h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
+               Upload an image of your PAN Card. Our Optical Character Recognition (OCR) engine will automatically extract and validate your details.
+            </p>
+            
+            <div className="input-group" style={{ border: '2px dashed var(--border-subtle)', padding: '30px', textAlign: 'center', borderRadius: '12px' }}>
+              <UploadCloud size={32} color="var(--brand-primary)" style={{ margin: '0 auto 10px' }} />
+              <label htmlFor="panFile" style={{ cursor: 'pointer', color: 'var(--brand-primary)', fontWeight: 600 }}>Click to Upload PAN Image (JPG/PNG)</label>
+              <input 
+                id="panFile"
+                type="file" 
+                accept="image/*"
+                onChange={e => setPanFile(e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+              {panFile && <div style={{ marginTop: '10px', color: 'var(--status-success)', fontSize: '14px' }}>Selected: {panFile.name}</div>}
             </div>
             
-            <div className="input-group">
-              <label>PAN Card Number (10 Alphanumeric)</label>
-              <input 
-                type="text" 
-                placeholder="ABCDE1234F"
-                value={kycData.pan_number}
-                onChange={e => setKycData({...kycData, pan_number: e.target.value})}
-                required
-                style={{ textTransform: 'uppercase' }}
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Aadhaar Number (12 Digits)</label>
-              <input 
-                type="text" 
-                placeholder="XXXX-XXXX-XXXX"
-                value={kycData.aadhaar_number}
-                onChange={e => setKycData({...kycData, aadhaar_number: e.target.value})}
-                maxLength={12}
-                required
-              />
-            </div>
-            
-            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '10px' }}>Verify Identity</button>
+            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '20px' }}>Run PAN OCR</button>
           </form>
         )}
 
         {step === 2 && (
-          <form onSubmit={handleDecisionSubmit}>
+          <form onSubmit={handleAadhaarUpload}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <FileCheck color="var(--brand-primary)" />
-                <h3 style={{ margin: 0 }}>Data Sharing Consent for Eligibility</h3>
+                <Shield color="var(--brand-primary)" />
+                <h3 style={{ margin: 0 }}>Step 2: Aadhaar XML Verification</h3>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
-               As per RBI DPDP framework, you must authorize us to securely pull your financial data for eligibility assessment.
+               Upload your Offline Aadhaar XML file. We will parse the XML and verify the UIDAI digital signature.
             </p>
 
-            <div className="input-group" style={{ display: 'flex', gap: '15px', alignItems: 'center', background: 'var(--bg-dark)', padding: '15px', borderRadius: '8px' }}>
+            <div className="input-group" style={{ border: '2px dashed var(--border-subtle)', padding: '30px', textAlign: 'center', borderRadius: '12px' }}>
+              <UploadCloud size={32} color="var(--brand-primary)" style={{ margin: '0 auto 10px' }} />
+              <label htmlFor="aadhaarFile" style={{ cursor: 'pointer', color: 'var(--brand-primary)', fontWeight: 600 }}>Click to Upload Aadhaar XML (.zip/.xml)</label>
               <input 
-                 type="checkbox" 
-                 id="cibil" 
-                 checked={conCibil} 
-                 onChange={e => setConCibil(e.target.checked)} 
-                 style={{ transform: 'scale(1.5)' }} 
+                id="aadhaarFile"
+                type="file" 
+                accept=".xml,.zip"
+                onChange={e => setAadhaarFile(e.target.files[0])}
+                style={{ display: 'none' }}
               />
-              <label htmlFor="cibil" style={{ margin: 0, cursor: 'pointer' }}>
-                 <strong>Credit Bureau Ping</strong><br/>
-                 <small style={{ color: 'var(--text-secondary)'}}>I authorize a soft-pull of my CIBIL risk score.</small>
-              </label>
-            </div>
-
-            <div className="input-group" style={{ display: 'flex', gap: '15px', alignItems: 'center', background: 'var(--bg-dark)', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
-              <input 
-                 type="checkbox" 
-                 id="aa" 
-                 checked={conAA} 
-                 onChange={e => setConAA(e.target.checked)} 
-                 style={{ transform: 'scale(1.5)' }} 
-              />
-              <label htmlFor="aa" style={{ margin: 0, cursor: 'pointer' }}>
-                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                     <Landmark size={16} /> <strong>Account Aggregator Link</strong>
-                 </div>
-                 <small style={{ color: 'var(--text-secondary)'}}>Securely transmit JSON bank statements for Income Verification.</small>
-              </label>
+              {aadhaarFile && <div style={{ marginTop: '10px', color: 'var(--status-success)', fontSize: '14px' }}>Selected: {aadhaarFile.name}</div>}
             </div>
             
-            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '30px' }}>Check Eligibility</button>
-            <button type="button" onClick={() => setStep(1)} className="btn-secondary" style={{ width: '100%', marginTop: '10px' }}>Back to e-KYC</button>
+            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '20px' }}>Parse Aadhaar XML</button>
+            <button type="button" onClick={() => setStep(1)} className="btn-secondary" style={{ width: '100%', marginTop: '10px' }}>Back</button>
+          </form>
+        )}
+        
+        {step === 3 && (
+          <form onSubmit={handleDeclarationSubmit}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                <UserCircle color="var(--brand-primary)" />
+                <h3 style={{ margin: 0 }}>Step 3: Self-Declared Financials</h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
+               Please estimate your average monthly income and expenses. Our ML engine will later cross-verify this with your bank statements to generate a Discrepancy Score.
+            </p>
+
+            <div className="input-group">
+              <label>Declared Monthly Income (₹)</label>
+              <input 
+                type="number" 
+                placeholder="e.g. 25000"
+                value={declaredIncome}
+                onChange={e => setDeclaredIncome(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label>Declared Monthly Expenses (₹)</label>
+              <input 
+                type="number" 
+                placeholder="e.g. 15000"
+                value={declaredExpenses}
+                onChange={e => setDeclaredExpenses(e.target.value)}
+                required
+              />
+            </div>
+            
+            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '20px' }}>Continue</button>
+            <button type="button" onClick={() => setStep(2)} className="btn-secondary" style={{ width: '100%', marginTop: '10px' }}>Back</button>
+          </form>
+        )}
+
+        {step === 4 && (
+          <form onSubmit={handleFinalSubmit}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                <Landmark color="var(--brand-primary)" />
+                <h3 style={{ margin: 0 }}>Step 4: Bank Statement NLP</h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
+               Upload your last 6 months Bank Statement (CSV format). Our NLP Categorizer will extract your true income and behavioral data.
+            </p>
+
+            <div className="input-group" style={{ border: '2px dashed var(--border-subtle)', padding: '30px', textAlign: 'center', borderRadius: '12px' }}>
+              <UploadCloud size={32} color="var(--brand-primary)" style={{ margin: '0 auto 10px' }} />
+              <label htmlFor="bankFile" style={{ cursor: 'pointer', color: 'var(--brand-primary)', fontWeight: 600 }}>Click to Upload Bank CSV</label>
+              <input 
+                id="bankFile"
+                type="file" 
+                accept=".csv"
+                onChange={e => setBankFile(e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+              {bankFile && <div style={{ marginTop: '10px', color: 'var(--status-success)', fontSize: '14px' }}>Selected: {bankFile.name}</div>}
+            </div>
+            
+            <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '30px' }}>Run Full ML Pipeline</button>
+            <button type="button" onClick={() => setStep(3)} className="btn-secondary" style={{ width: '100%', marginTop: '10px' }}>Back</button>
           </form>
         )}
           </div>

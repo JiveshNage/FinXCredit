@@ -4,6 +4,9 @@ import { Sidebar } from './Dashboard';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertTriangle, Lightbulb, Download } from 'lucide-react';
 import ScoreMeter from '../../components/user/ScoreMeter';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell 
+} from 'recharts';
 
 const Results = () => {
   const { state } = useLocation();
@@ -50,6 +53,14 @@ const Results = () => {
     { label: "Financial Discipline", val: data.factors?.discipline_score || 0, max: 15 },
   ];
 
+  const cashFlowData = [
+    { name: 'Income', amount: data.income || 0 },
+    { name: 'Expenses', amount: data.expenses || 0 },
+    { name: 'Savings', amount: data.savings || 0 },
+  ];
+  
+  const COLORS = ['#00FF88', '#FF4D4D', '#00D1FF'];
+
   return (
     <div className="app-container" style={{ position: 'relative', overflow: 'hidden' }}>
       <div className="bg-orb bg-orb-1" style={{ top: '-10%', left: '20%' }}></div>
@@ -72,15 +83,41 @@ const Results = () => {
                  </h2>
                  <p style={{ color: 'var(--text-secondary)' }}>Risk Level: {data.risk}</p>
                  
+                 <div style={{ marginTop: '20px', padding: '15px', background: 'var(--bg-dark)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Alternative CIBIL-like Score</p>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--brand-secondary)' }}>
+                       {data.cibil_score || "N/A"}
+                    </div>
+                 </div>
+                 
                </div>
 
-               <div className="glass-card" style={{ background: 'var(--brand-primary-glow)', borderColor: 'var(--brand-primary)' }}>
+               <div className="glass-card" style={{ background: 'var(--brand-primary-glow)', borderColor: 'var(--brand-primary)', marginBottom: '24px' }}>
                  <h3 style={{ marginBottom: '8px' }}>Loan Recommendation</h3>
                  <h2 className="text-gradient" style={{ fontSize: '2rem' }}>{data.loan}</h2>
                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '12px' }}>
                    *Subject to final KYC verification automatically carried out by our partner NBFCs.
                  </p>
                </div>
+
+               {data.income && (
+                 <div className="glass-card" style={{ height: '300px', padding: '20px' }}>
+                   <h3 style={{ marginBottom: '16px', fontSize: '1rem' }}>Cash Flow Analytics (Monthly Avg)</h3>
+                   <ResponsiveContainer width="100%" height="80%">
+                     <BarChart data={cashFlowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                       <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                       <XAxis dataKey="name" stroke="#aaa" tick={{fontSize: 12}} />
+                       <YAxis stroke="#aaa" tick={{fontSize: 12}} />
+                       <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e24', border: 'none', borderRadius: '8px', color: '#fff' }} cursor={{fill: '#2a2a35'}} />
+                       <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                         {cashFlowData.map((entry, index) => (
+                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                         ))}
+                       </Bar>
+                     </BarChart>
+                   </ResponsiveContainer>
+                 </div>
+               )}
                
                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                   <button className="btn-primary" style={{ flex: 1 }}><Download size={18}/> Download PDF</button>

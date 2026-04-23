@@ -5,7 +5,7 @@ import { Sidebar } from './Dashboard';
 import { API_BASE_URL } from '../../config';
 
 const Eligibility = () => {
-  const { user } = useAuth();
+  const { token } = useAuth();
   const [formData, setFormData] = useState({
     income: 25000,
     expenses: 12000,
@@ -29,6 +29,7 @@ const Eligibility = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
         body: JSON.stringify(formData)
