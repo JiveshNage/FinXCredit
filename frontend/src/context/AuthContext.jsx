@@ -1,56 +1,68 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { API_BASE_URL } from '../config';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-  }, []);
-
-  const login = useCallback((userData, accessToken) => {
-    setUser(userData);
-    setToken(accessToken);
-    localStorage.setItem('token', accessToken);
-  }, []);
-
+  // Check backend for active cookie session on mount
   useEffect(() => {
-    const fetchUser = async () => {
-      if (token) {
-        try {
-          const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            console.error('Failed to fetch user');
-            logout();
-          }
-        } catch (error) {
-          console.error('Auth error', error);
-          logout();
+    const checkAuthStatus = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/auth/me', {
+          credentials: 'include' // This ensures HttpOnly Cookies are passed securely!
+        });
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+          setIsAuthenticated(true);
+        } else {
+          // If unauthorized (401), we just stay unauthenticated
+          setUser(null);
+          setIsAuthenticated(false);
         }
+      } catch (_) {
+        console.warn("Backend not reachable or no active session.");
+        setUser(null);
+        setIsAuthenticated(false);
       }
       setLoading(false);
     };
+    checkAuthStatus();
+  }, []);
 
-    fetchUser();
-  }, [token, logout]);
+  const login = (userData) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  const logout = async () => {
+    setUser(null);
+    setIsAuthenticated(false);
+    
+    // Ping backend to clear HttpOnly Cookies
+    try {
+      await fetch('http://localhost:8000/api/auth/logout', { 
+        method: 'POST', 
+        credentials: 'include' 
+      });
+    } catch(_) {
+      console.warn("Failed to ping logout correctly.");
+    }
+  };
+
+  if (loading) {
+     return <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', color: 'var(--brand-primary)' }}>Authenticating Secure Context...</div>;
+  }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+      {children}
     </AuthContext.Provider>
   );
 };
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAuth = () => useContext(AuthContext);
