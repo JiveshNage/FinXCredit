@@ -26,15 +26,56 @@ def hash_otp(otp_code: str):
 def verify_otp_hash(plain_otp: str, hashed_otp: str):
     return pwd_context.verify(plain_otp, hashed_otp)
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 def send_email_otp(email: str, otp_code: str):
     """
-    Mock Email Delivery via SendGrid or SMTP
-    In production, use Sendgrid/AWS SES.
+    Real Email Delivery via Brevo SMTP
     """
-    print(f"\n[EMAIL OTP SIMULATION] Sending OTP to {email}")
-    print(f"Subject: Your CreditBridge Verification Code: {otp_code}")
-    print(f"Body: Use {otp_code} to verify your action. Expires in 10 minutes.\n")
-    return True
+    print(f"\n[EMAIL OTP] Sending real OTP to {email}")
+    
+    sender_email = "a919cd001@smtp-brevo.com"  # Using the Brevo login as sender
+    receiver_email = email
+    
+    message = MIMEMultipart("alternative")
+    message["Subject"] = f"Your CreditBridge Verification Code: {otp_code}"
+    message["From"] = f"CreditBridge AI <{sender_email}>"
+    message["To"] = receiver_email
+    
+    text = f"Welcome to CreditBridge!\n\nYour verification code is: {otp_code}\n\nThis code is valid for 10 minutes. Do not share this with anyone."
+    html = f\"\"\"
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; text-align: center;">
+          <h2 style="color: #4f46e5; margin-bottom: 20px;">CreditBridge Verification</h2>
+          <p style="font-size: 16px; margin-bottom: 30px;">Your secure verification code is:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b; background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+            {otp_code}
+          </div>
+          <p style="font-size: 14px; color: #64748b;">This code expires in 10 minutes. Please do not share it with anyone.</p>
+        </div>
+      </body>
+    </html>
+    \"\"\"
+    
+    part1 = MIMEText(text, "plain")
+    part2 = MIMEText(html, "html")
+    message.attach(part1)
+    message.attach(part2)
+    
+    try:
+        # Create secure connection with server and send email
+        with smtplib.SMTP("smtp-relay.brevo.com", 587) as server:
+            server.starttls()
+            # server.login("a919cd001@smtp-brevo.com", "YOUR_API_KEY_HERE") # Pulled from env in production
+            server.sendmail(sender_email, receiver_email, message.as_string())
+        print(f"Successfully sent OTP to {email}")
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 def send_sms_otp(phone: str, otp_code: str):
     """

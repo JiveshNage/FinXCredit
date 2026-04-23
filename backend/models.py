@@ -12,6 +12,7 @@ class User(Base):
 
     id = Column(String, primary_key=True, index=True, default=generate_uuid)
     name = Column(String)
+    place = Column(String, nullable=True)
     email = Column(String, unique=True, index=True)
     phone = Column(String, unique=True, index=True)
     password_hash = Column(String)
@@ -35,6 +36,7 @@ class User(Base):
     applications = relationship("LoanApplicationDB", back_populates="user", cascade="all, delete-orphan")
     otp_records = relationship("OtpRecord", back_populates="user", cascade="all, delete-orphan")
     consent_logs = relationship("ConsentLog", back_populates="user", cascade="all, delete-orphan")
+    transactions = relationship("BankTransaction", back_populates="user", cascade="all, delete-orphan")
 
 class ConsentLog(Base):
     __tablename__ = "consent_logs"
@@ -54,12 +56,17 @@ class LoanApplicationDB(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"))
     
-    # Financial Inputs
+    # Financial Inputs (ML Extracted)
     income = Column(Float)
     expenses = Column(Float)
     savings = Column(Float)
     transactions = Column(Integer)
     loan_history = Column(Boolean)
+    
+    # Self-Declared Financials
+    declared_income = Column(Float, nullable=True)
+    declared_expenses = Column(Float, nullable=True)
+    discrepancy_score = Column(Float, nullable=True) # 0 to 100 (higher = more discrepancy)
     
     # Optional / Alternative Data (Fallbacks)
     upi_freq = Column(Integer, nullable=True)
@@ -164,3 +171,16 @@ class BankStatement(Base):
     verified_savings = Column(Integer)
     upi_transactions = Column(Integer)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class BankTransaction(Base):
+    __tablename__ = "bank_transactions"
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"))
+    date = Column(String)
+    amount = Column(Float)
+    type = Column(String) # 'CREDIT' or 'DEBIT'
+    category = Column(String) # 'Salary', 'UPI', 'Utilities', etc.
+    description = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="transactions")

@@ -22,8 +22,9 @@ class SignupInitiate(BaseModel):
     name: str
     email: EmailStr
     phone: str
+    place: str
     password: str
-    worker_type: str
+    worker_type: str = "salaried"
 
     @validator('password')
     def validate_password_strength(cls, v):
@@ -67,6 +68,7 @@ def signup_initiate(request: Request, req: SignupInitiate, db: Session = Depends
         name=req.name,
         email=req.email,
         phone=req.phone,
+        place=req.place,
         password_hash=password_hash,
         worker_type=req.worker_type,
         status="pending_verification"
@@ -106,8 +108,10 @@ def signup_verify_otp(request: Request, response: Response, req: VerifyOTPReques
         return {
             "message": "Verified successfully",
             "user": {
+                "id": user.id,
                 "name": user.name,
                 "email": user.email,
+                "place": user.place,
                 "role": user.role,
                 "worker_type": user.worker_type
             }
@@ -140,8 +144,53 @@ def signin(request: Request, response: Response, req: SigninRequest, db: Session
     return {
         "message": "Sign In successful",
         "user": {
+             "id": user.id,
              "name": user.name,
              "email": user.email,
+             "place": user.place,
+             "role": user.role,
+             "worker_type": user.worker_type
+         }
+    }
+
+class GoogleSigninRequest(BaseModel):
+    email: str
+    name: str
+
+@router.post("/google")
+@limiter.limit("5/minute")
+def signin_google(request: Request, response: Response, req: GoogleSigninRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == req.email).first()
+    
+    if not user:
+        # Auto-register google users
+        user = models.User(
+            name=req.name,
+            email=req.email,
+            phone="G_" + req.email, # Mock unique phone
+            password_hash=pwd_context.hash("google_oauth_placeholder"),
+            worker_type="salaried",
+            status="active",
+            email_verified=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+    access_token = create_access_token({"id": user.id, "role": user.role})
+    refresh_token = create_refresh_token({"id": user.id})
+    
+    # Set HttpOnly Cookies
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax")
+    
+    return {
+        "message": "Google Sign In successful",
+        "user": {
+             "id": user.id,
+             "name": user.name,
+             "email": user.email,
+             "place": user.place,
              "role": user.role,
              "worker_type": user.worker_type
          }

@@ -52,8 +52,8 @@ const Profile = () => {
       const newState = !securityData.twoFaEnabled;
       setSecurityData(prev => ({ ...prev, twoFaEnabled: newState }));
       login({ ...user, two_fa_enabled: newState });
-    } catch (_) {
-      console.warn("Toggle 2FA failed.");
+    } catch (err) {
+      console.warn("Toggle 2FA failed.", err);
     }
   };
 

@@ -1,237 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { Users, Activity, AlertTriangle, ShieldCheck, ArrowUpRight, LogOut, RefreshCw, Loader } from 'lucide-react';
+import { ArrowLeft, Database, Activity, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 const AdminDashboard = () => {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+  const { token, logout } = useContext(AuthContext);
+  const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState(null);
-  const [recentApps, setRecentApps] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      navigate('/login');
-      return;
-    }
-    fetchAllData();
-  }, [user, navigate]);
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const fetchAllData = async () => {
-    setRefreshing(true);
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      // Fetch stats and applications in parallel
-      const [statsRes, appsRes] = await Promise.all([
-        fetch('http://localhost:8000/api/admin/stats', { credentials: 'include' }),
-        fetch('http://localhost:8000/api/admin/applications', { credentials: 'include' })
-      ]);
+      // Fetch Applications
+      const appRes = await fetch(`${API_BASE_URL}/api/admin/applications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      // Fetch Stats
+      const statRes = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
+      if (!appRes.ok || !statRes.ok) {
+        if (appRes.status === 401 || appRes.status === 403) {
+           alert("Not authorized or session expired.");
+           logout(); navigate("/admin-login"); return;
+        }
+        throw new Error('Failed to fetch');
       }
-      
-      if (appsRes.ok) {
-        const appsData = await appsRes.json();
-        setRecentApps(appsData.slice(0, 10)); // Show latest 10
-      }
-    } catch (err) {
-      console.warn("Failed to fetch admin data:", err);
-    }
+      setApplications(await appRes.json());
+      setStats(await statRes.json());
+    } catch (e) { console.error(e); }
     setLoading(false);
-    setRefreshing(false);
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const formatDate = (ds) => {
-    if (!ds) return '—';
-    return new Date(ds).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   return (
-    <div className="app-container">
-      {/* Admin Sidebar */}
-      <div style={{ width: '260px', borderRight: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', padding: '24px', backdropFilter: 'blur(20px)' }}>
-        <h2 className="text-gradient" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>CreditBridge</h2>
-        <div style={{ fontSize: '0.8rem', color: 'var(--brand-secondary)', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '40px' }}>ADMIN CONTROL</div>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', background: 'var(--brand-primary-glow)', color: 'var(--brand-secondary)', fontWeight: '600' }}>
-            <Activity size={20}/> Overview
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', color: 'var(--text-secondary)' }}>
-            <Users size={20}/> User Management
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', color: 'var(--text-secondary)' }}>
-            <ShieldCheck size={20}/> ML Rule Settings
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', color: 'var(--status-error)' }}>
-            <AlertTriangle size={20}/> Fraud Alerts ({stats?.fraud_alerts_count || 0})
-          </div>
+    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', color: '#f8fafc' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <button 
+            style={{ background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '1rem', color: '#94a3b8' }} 
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft size={16} /> Back to Consumer App
+          </button>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '2rem', margin: 0 }}>
+            <Database size={32} color="#3b82f6" /> Central Admin Console
+          </h2>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', marginTop: '10px' }}>
+            <Activity size={16} /> Portfolio Management & Risk Underwriting
+          </p>
         </div>
         
-        <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'transparent', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', textAlign: 'left', fontWeight: 'bold' }}>
-          <LogOut size={20}/> Logout
+        <button 
+          className="btn-primary" 
+          style={{ width: 'auto', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '0.75rem 1.5rem', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }} 
+          onClick={fetchData}
+          disabled={loading}
+        >
+          <RefreshCw size={18} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> 
+          {loading ? 'Syncing...' : 'Refresh Feed'}
         </button>
       </div>
 
-      {/* Main Content */}
-      <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-            <h1>Admin Overview</h1>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <button onClick={fetchAllData} disabled={refreshing} className="btn-secondary" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
-                <RefreshCw size={16} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
-                {refreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-              <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-              <div style={{ background: 'var(--bg-elevated)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', border: '1px solid var(--brand-primary)' }}>
-                🟢 System: {stats ? 'Connected' : 'Loading...'}
-              </div>
-            </div>
+      {/* Portfolio Analytics Section */}
+      {stats && (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+         <div style={{ background: '#1e293b', padding: '1.5rem', borderRadius: '16px', borderLeft: '4px solid #3b82f6' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>Total Portfolio Size</p>
+            <h3 style={{ fontSize: '2rem', margin: 0 }}>{stats.total_applications}</h3>
+         </div>
+         <div style={{ background: '#1e293b', padding: '1.5rem', borderRadius: '16px', borderLeft: '4px solid #10b981' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>Approval Rate</p>
+            <h3 style={{ fontSize: '2rem', margin: 0, color: '#10b981' }}>{stats.approval_rate}%</h3>
+         </div>
+         <div style={{ background: '#1e293b', padding: '1.5rem', borderRadius: '16px', borderLeft: '4px solid #f59e0b' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>Average Score</p>
+            <h3 style={{ fontSize: '2rem', margin: 0 }}>{stats.average_score}</h3>
+         </div>
+         <div style={{ background: '#1e293b', padding: '1.5rem', borderRadius: '16px', borderLeft: '4px solid #ef4444' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>Fraud Alerts</p>
+            <h3 style={{ fontSize: '2rem', margin: 0, color: '#ef4444' }}>{stats.fraud_alerts_count}</h3>
+         </div>
+      </div>
+      )}
+
+      <div style={{ background: '#1e293b', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        {loading && applications.length === 0 ? (
+          <div style={{ padding: '4rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+             <RefreshCw size={40} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', marginBottom: '1rem' }} />
+             <p style={{ color: '#94a3b8' }}>Connecting to secure databases...</p>
+             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
-
-          {loading ? (
-            <div className="glass-card" style={{ textAlign: 'center', padding: '60px' }}>
-              <Loader size={36} color="var(--brand-primary)" style={{ animation: 'spin 2s linear infinite', marginBottom: '16px' }} />
-              <p style={{ color: 'var(--text-secondary)' }}>Connecting to database...</p>
-            </div>
-          ) : (
-            <>
-              {/* Stats Cards — from real /api/admin/stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '40px' }}>
-                <div className="glass-card" style={{ borderTop: '4px solid var(--brand-primary)' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>Total Registered Workers</p>
-                  <h2 style={{ fontSize: '2.5rem' }}>{stats?.total_users?.toLocaleString() || 0}</h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '8px' }}>Active users on platform</p>
-                </div>
-                
-                <div className="glass-card" style={{ borderTop: '4px solid var(--brand-secondary)' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>Total Applications</p>
-                  <h2 style={{ fontSize: '2.5rem' }}>{stats?.total_applications?.toLocaleString() || 0}</h2>
-                  <p style={{ color: 'var(--status-success)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', marginTop: '8px' }}>
-                    <ArrowUpRight size={16}/> {stats?.approval_rate || 0}% approval rate
-                  </p>
-                </div>
-
-                <div className="glass-card" style={{ borderTop: '4px solid var(--status-success)' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>Average Credit Score</p>
-                  <h2 style={{ fontSize: '2.5rem' }}>{stats?.average_score || 0}</h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '8px' }}>Out of 100 points</p>
-                </div>
-
-                <div className="glass-card" style={{ borderTop: '4px solid var(--status-error)' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>Active Fraud Flags</p>
-                  <h2 style={{ fontSize: '2.5rem', color: stats?.fraud_alerts_count > 0 ? 'var(--status-error)' : 'var(--text-primary)' }}>
-                    {stats?.fraud_alerts_count || 0}
-                  </h2>
-                  <p style={{ color: stats?.fraud_alerts_count > 0 ? 'var(--status-error)' : 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', marginTop: '8px' }}>
-                    {stats?.fraud_alerts_count > 0 ? <><AlertTriangle size={16} style={{marginRight:'4px'}}/> Action Required</> : 'No alerts'}
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
-                 
-                 {/* Left - Real Application Pipeline */}
-                 <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-                   <div style={{ padding: '24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <h3 style={{ margin: 0 }}>Recent Applications Pipeline</h3>
-                     <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{recentApps.length} shown</span>
-                   </div>
-                   
-                   {recentApps.length === 0 ? (
-                     <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                       No applications in the system yet.
-                     </div>
-                   ) : (
-                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                       <thead>
-                         <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                           <th style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontWeight: '600' }}>ID</th>
-                           <th style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontWeight: '600' }}>User</th>
-                           <th style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontWeight: '600' }}>Score</th>
-                           <th style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontWeight: '600' }}>Risk</th>
-                           <th style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontWeight: '600' }}>Status</th>
-                           <th style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontWeight: '600' }}>Date</th>
-                         </tr>
-                       </thead>
-                       <tbody>
-                         {recentApps.map(app => (
-                           <tr key={app.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                             <td style={{ padding: '16px 24px', color: 'var(--text-muted)' }}>#{app.id}</td>
-                             <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>{app.user_name}</td>
-                             <td style={{ padding: '16px 24px', color: app.score > 70 ? 'var(--status-success)' : app.score > 40 ? 'var(--status-warning)' : 'var(--status-error)', fontWeight: 'bold' }}>{app.score}</td>
-                             <td style={{ padding: '16px 24px', color: 'var(--text-secondary)' }}>{app.risk_level}</td>
-                             <td style={{ padding: '16px 24px' }}>
-                               <span style={{ 
-                                  padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold',
-                                  background: app.status === 'Approved' ? 'rgba(16,185,129,0.1)' : app.status === 'Rejected' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-                                  color: app.status === 'Approved' ? 'var(--status-success)' : app.status === 'Rejected' ? 'var(--status-error)' : 'var(--status-warning)'
-                               }}>
-                                 {app.is_flagged ? '⚠ Flagged' : app.status}
-                               </span>
-                             </td>
-                             <td style={{ padding: '16px 24px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>{formatDate(app.date)}</td>
-                           </tr>
-                         ))}
-                       </tbody>
-                     </table>
-                   )}
-                 </div>
-
-                 {/* Right - ML Engine Controls */}
-                 <div className="glass-card" style={{ height: 'fit-content' }}>
-                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-                     <ShieldCheck className="text-gradient" /> Engine Toggles
-                   </h3>
-                   
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
-                       <div>
-                         <span style={{ fontWeight: 'bold', display: 'block' }}>Determinism Engine</span>
-                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Rule-based transparent scoring</span>
-                       </div>
-                       <input type="checkbox" checked={true} readOnly style={{ accentColor: 'var(--status-success)', width: '20px', height: '20px' }} />
-                     </div>
-
-                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
-                       <div>
-                         <span style={{ fontWeight: 'bold', display: 'block' }}>XGBoost Override</span>
-                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ML risk detection fallback layer</span>
-                       </div>
-                       <input type="checkbox" checked={true} readOnly style={{ accentColor: 'var(--status-success)', width: '20px', height: '20px' }} />
-                     </div>
-                     
-                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <div>
-                         <span style={{ fontWeight: 'bold', display: 'block' }}>Strict OTP Enforce</span>
-                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Require 2FA on riskier logins</span>
-                       </div>
-                       <input type="checkbox" checked={false} readOnly style={{ accentColor: 'var(--brand-primary)', width: '20px', height: '20px' }} />
-                     </div>
-                     
-                     <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-elevated)', borderRadius: '12px' }}>
-                       <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Model</div>
-                       <div style={{ fontWeight: 'bold' }}>XGBoost Pan-India v2</div>
-                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>48 cities • 22 states • 10 job types</div>
-                     </div>
-                   </div>
-                 </div>
-
-              </div>
-            </>
-          )}
-        </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+                  <th style={{ padding: '1.5rem 1rem', color: '#94a3b8', fontSize: '0.875rem', textTransform: 'uppercase' }}>Ref ID</th>
+                  <th style={{ padding: '1.5rem 1rem', color: '#94a3b8', fontSize: '0.875rem', textTransform: 'uppercase' }}>User Name</th>
+                  <th style={{ padding: '1.5rem 1rem', color: '#94a3b8', fontSize: '0.875rem', textTransform: 'uppercase' }}>ML Score</th>
+                  <th style={{ padding: '1.5rem 1rem', color: '#94a3b8', fontSize: '0.875rem', textTransform: 'uppercase' }}>Risk Flags</th>
+                  <th style={{ padding: '1.5rem 1rem', color: '#94a3b8', fontSize: '0.875rem', textTransform: 'uppercase' }}>Decision</th>
+                  <th style={{ padding: '1.5rem 1rem', color: '#94a3b8', fontSize: '0.875rem', textTransform: 'uppercase' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applications.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                      No verification logs available.
+                    </td>
+                  </tr>
+                ) : applications.map((app) => (
+                  <tr 
+                    key={app.id} 
+                    onClick={() => navigate(`/admin/application/${app.id}`)}
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s', cursor: 'pointer' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={{ padding: '1rem', fontFamily: 'monospace' }}>
+                      <span style={{ fontWeight: 700, display: 'block' }}>#{app.id}</span>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{ fontWeight: 500 }}>{app.user_name}</span>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: 700, color: app.status === 'Approved' ? '#10b981' : '#f59e0b' }}>
+                        {app.score}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem', color: app.is_flagged ? '#ef4444' : '#94a3b8' }}>
+                      {app.is_flagged ? "Fraud Risk Detected" : "Standard"}
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      {app.status === 'Approved' ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                          <CheckCircle size={14} /> Approved
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                          <XCircle size={14} /> {app.status}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.8rem', fontWeight: 500, color: '#3b82f6' }}>
+                      View Deep Analytics &rarr;
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

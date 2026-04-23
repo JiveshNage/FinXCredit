@@ -5,6 +5,7 @@ import { FileText, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const History = () => {
+  const { token } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,6 +13,7 @@ export const History = () => {
     const fetchHistory = async () => {
       try {
         const response = await fetch('http://localhost:8000/api/applications/', {
+          headers: { 'Authorization': `Bearer ${token}` },
           credentials: 'include'
         });
         if (response.ok) {
@@ -25,7 +27,8 @@ export const History = () => {
             { id: 3, score: 45, risk_level: 'High Risk', decision: 'Rejected', created_at: '2025-01-15T09:15:00Z' }
           ]);
         }
-      } catch (_) {
+      } catch (err) {
+        console.error("Error fetching history:", err);
         setApplications([
           { id: 1, score: 82, risk_level: 'Low Risk', decision: 'Approved', created_at: '2025-10-12T10:00:00Z' },
           { id: 2, score: 65, risk_level: 'Medium Risk', decision: 'Medium Risk', created_at: '2025-08-01T14:30:00Z' }
@@ -34,7 +37,7 @@ export const History = () => {
       setLoading(false);
     };
     fetchHistory();
-  }, []);
+  }, [token]);
 
   const formatDate = (ds) => {
     return new Date(ds).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });

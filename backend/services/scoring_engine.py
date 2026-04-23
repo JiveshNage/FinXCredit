@@ -72,6 +72,10 @@ def generate_tips(data, reasons):
         
     return tips
 
+def calculate_cibil_equivalent(internal_score: float) -> int:
+    """Maps internal 0-100 score to standard 300-900 CIBIL range"""
+    return int(300 + (internal_score * 6))
+
 def calculate_score(data_dict):
     """
     Implements the heuristics described in the master prompt.
@@ -83,33 +87,48 @@ def calculate_score(data_dict):
     loan_history = bool(data_dict.get('loan_history', False))
     upi_freq = int(data_dict.get('upi_freq', 0) or 0)
     bill_regularity = data_dict.get('bill_regularity', "Unknown")
+    worker_type = data_dict.get('worker_type', 'salaried')
     
-    # 1. INCOME STABILITY (30 points)
+    # Gig Worker Mode - Adjust Weights
+    # Formal workers get standard weights, gig workers rely more on transactions/savings
+    if worker_type in ['delivery', 'freelancer', 'street_vendor']:
+        w_income = 0.15
+        w_txn = 0.35
+        w_savings = 0.20
+        w_spending = 0.15
+        w_discipline = 0.15
+    else:
+        w_income = 0.30
+        w_txn = 0.20
+        w_savings = 0.20
+        w_spending = 0.15
+        w_discipline = 0.15
+
+    # 1. INCOME STABILITY
     total_in_out = income + expenses
     income_ratio = income / total_in_out if total_in_out > 0 else 0
-    income_score = clamp(income_ratio * 100, 0, 100) * 0.30
+    income_score = clamp(income_ratio * 100, 0, 100) * w_income * 100
 
-    # 2. TRANSACTION ACTIVITY (20 points)  
-    txn_score = clamp(transactions / 150 * 100, 0, 100) * 0.20
-    # Boost if UPI transactions provided
+    # 2. TRANSACTION ACTIVITY
+    txn_score = clamp(transactions / 150 * 100, 0, 100) * w_txn * 100
     if upi_freq: 
         txn_score += min(upi_freq / 200 * 5, 5)
 
-    # 3. SAVINGS RATIO (20 points)
+    # 3. SAVINGS RATIO
     savings_ratio = savings / max(income, 1)
-    savings_score = clamp(savings_ratio * 200, 0, 100) * 0.20
+    savings_score = clamp(savings_ratio * 200, 0, 100) * w_savings * 100
 
-    # 4. SPENDING BEHAVIOR (15 points)
+    # 4. SPENDING BEHAVIOR
     expense_ratio = expenses / max(income, 1)
-    spending_score = clamp((1 - expense_ratio) * 100, 0, 100) * 0.15
+    spending_score = clamp((1 - expense_ratio) * 100, 0, 100) * w_spending * 100
 
-    # 5. FINANCIAL DISCIPLINE (15 points)
-    discipline = 50  # base
+    # 5. FINANCIAL DISCIPLINE
+    discipline = 50
     if loan_history:
         discipline += 20
-    bill_map = {"Always": 30, "Usually": 20, "Sometimes": 10, "Rarely": 0}
+    bill_map = {"always_on_time": 30, "sometimes_late": 10, "Usually": 20, "Always": 30, "Rarely": 0}
     discipline += bill_map.get(bill_regularity, 0)
-    discipline_score = clamp(discipline, 0, 100) * 0.15
+    discipline_score = clamp(discipline, 0, 100) * w_discipline * 100
 
     final_score = income_score + txn_score + savings_score + spending_score + discipline_score
     final_score = round(clamp(final_score, 0, 100), 1)
@@ -128,12 +147,33 @@ def calculate_score(data_dict):
         risk = "High Risk"
         loan = "Not eligible currently"
 
-    # FRAUD DETECTION
+    # FRAUD & DISCREPANCY DETECTION
     flags = []
     if income > 100000 and transactions < 5:
         flags.append("High income but very low transactions")
     if savings > income:
         flags.append("Savings exceed declared income")
+        
+    discrepancy_score = 0
+    declared_income = data_dict.get('declared_income')
+    declared_expenses = data_dict.get('declared_expenses')
+    
+    if declared_income is not None and declared_expenses is not None:
+        # If they declare much more than we verify, that's high discrepancy
+        income_diff = (declared_income - income) / max(income, 1)
+        expense_diff = (expenses - declared_expenses) / max(expenses, 1) # if real expenses are much higher than declared
+        
+        # Base discrepancy
+        discrepancy_score = max(0, income_diff * 50) + max(0, expense_diff * 50)
+        discrepancy_score = clamp(discrepancy_score, 0, 100)
+        
+        if discrepancy_score > 40:
+            flags.append(f"High Discrepancy Alert: Declared financials do not match verified bank data.")
+            # Penalize final score
+            final_score = max(0, final_score - 15)
+            if decision == "Approved":
+                decision = "Medium Risk"
+                risk = "Medium Risk"
     
     # EXPLAINABILITY
     reasons = generate_reasons(income_score, txn_score, savings_score, spending_score, discipline_score)
@@ -149,11 +189,13 @@ def calculate_score(data_dict):
 
     return {
         "score": final_score,
+        "cibil_equivalent": calculate_cibil_equivalent(final_score),
         "decision": decision,
         "risk": risk,
         "loan": loan,
         "reasons": reasons,
         "tips": tips,
         "flags": flags,
-        "factors": factors_breakdown
+        "factors": factors_breakdown,
+        "discrepancy_score": discrepancy_score
     }
