@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, FileText, CheckCircle, XCircle, AlertTriangle, Send, Bell, User, Edit3 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
 const AdminAppDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, logout } = useContext(AuthContext);
+  const { token, logout } = useAuth();
   
   const [appData, setAppData] = useState(null);
   const [loading, setLoading] = useState(true);
