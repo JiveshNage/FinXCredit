@@ -31,13 +31,10 @@ const Signup = () => {
         body: JSON.stringify(formData)
       });
       if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
       setStep(2);
     } catch (err) {
-      // For development when backend isn't running smoothly:
       console.error(err);
-      console.warn("Backend error, simulating OTP step for offline dev.");
-      setStep(2);
+      setError(err.message || "Failed to send OTP. Please try again.");
     }
     setLoading(false);
   };
@@ -59,11 +56,6 @@ const Signup = () => {
     } catch (err) {
       console.error(err);
       setError("Incorrect code. Please try again.");
-      // Fallback for offline dev
-      if (otpCode === "123456") {
-        login({ name: formData.name, email: formData.email, role: 'user', worker_type: formData.worker_type });
-        navigate('/dashboard');
-      }
     }
     setLoading(false);
   };

@@ -22,16 +22,9 @@ class SignupInitiate(BaseModel):
     name: str
     email: EmailStr
     phone: str
-    place: str
+    place: str = "Not specified"
     password: str
     worker_type: str = "salaried"
-
-    @validator('password')
-    def validate_password_strength(cls, v):
-        pattern = r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"
-        if not re.match(pattern, v):
-            raise ValueError('Password must be at least 8 characters and contain a letter, a number, and a special character.')
-        return v
 
 class VerifyOTPRequest(BaseModel):
     identifier: str # email or phone

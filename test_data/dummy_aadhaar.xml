@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfflinePaperlessKyc>
+  <UidData>
+    <Poi name="Arjun Patel" dob="01-01-1990" gender="M"/>
+    <Poa state="Maharashtra" dist="Mumbai" pc="400001"/>
+  </UidData>
+  <Signature>DummyDigitalSignature12345</Signature>
+</OfflinePaperlessKyc>
