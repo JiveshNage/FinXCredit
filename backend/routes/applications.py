@@ -11,7 +11,7 @@ import models
 from database import get_db
 from utils.jwt_utils import get_current_user, get_admin_user
 from services.scoring_engine import calculate_score
-from services.kyc_service import simulate_pan_verification, simulate_aadhaar_verification, hash_kyc_data, extract_pan_ocr, parse_aadhaar_xml
+from services.kyc_service import simulate_pan_verification, simulate_aadhaar_verification, hash_kyc_data, extract_pan_ocr, parse_aadhaar_xml, mock_uidai_ping, validate_pan
 from services.aa_service import fetch_aa_bank_statements, parse_bank_csv
 from services.aa_service import fetch_aa_bank_statements
 from services.bureau_service import fetch_cibil_report
