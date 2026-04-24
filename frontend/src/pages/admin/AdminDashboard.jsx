@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Database, Activity, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
-import { API_BASE_URL } from '../config';
+import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { token, logout } = useContext(AuthContext);
+  const { token, logout } = useAuth();
   const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);

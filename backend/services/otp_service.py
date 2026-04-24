@@ -45,7 +45,7 @@ def send_email_otp(email: str, otp_code: str):
     message["To"] = receiver_email
     
     text = f"Welcome to CreditBridge!\n\nYour verification code is: {otp_code}\n\nThis code is valid for 10 minutes. Do not share this with anyone."
-    html = f\"\"\"
+    html = f"""
     <html>
       <body style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
         <div style="max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; text-align: center;">
@@ -58,7 +58,7 @@ def send_email_otp(email: str, otp_code: str):
         </div>
       </body>
     </html>
-    \"\"\"
+    """
     
     part1 = MIMEText(text, "plain")
     part2 = MIMEText(html, "html")
