@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, FileCheck, Landmark, UploadCloud, UserCircle, Loader } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { Sidebar } from './Dashboard';
 import { API_BASE_URL } from '../../config';
 
 const Apply = () => {
   const navigate = useNavigate();
-  const { token } = useAuth();
+
   const [step, setStep] = useState(1);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -33,7 +32,7 @@ const Apply = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/applications/upload/pan`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
         body: formData
       });
       if (!res.ok) throw new Error((await res.json()).detail || "PAN OCR Verification Failed");
@@ -53,7 +52,7 @@ const Apply = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/applications/upload/aadhaar`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
         body: formData
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Aadhaar XML Verification Failed");
@@ -86,7 +85,7 @@ const Apply = () => {
       
       let res = await fetch(`${API_BASE_URL}/api/applications/upload/bank`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
         body: formData
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Bank statement parsing failed");
@@ -96,7 +95,8 @@ const Apply = () => {
       // 2. Submit Application (with declared financials)
       res = await fetch(`${API_BASE_URL}/api/applications/calculate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             consent_aa: true, 
             consent_cibil: true,

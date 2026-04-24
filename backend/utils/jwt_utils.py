@@ -8,7 +8,7 @@ from database import get_db
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super_secret_finx_jwt_key_for_testing")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):

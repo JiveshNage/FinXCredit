@@ -36,7 +36,7 @@ def send_email_otp(email: str, otp_code: str):
     """
     print(f"\n[EMAIL OTP] Sending real OTP to {email}")
     
-    sender_email = "a919cd001@smtp-brevo.com"  # Using the Brevo login as sender
+    sender_email = os.getenv("BREVO_SMTP_USER", "a919cd001@smtp-brevo.com")  # Using the Brevo login as sender
     receiver_email = email
     
     message = MIMEMultipart("alternative")
@@ -69,7 +69,12 @@ def send_email_otp(email: str, otp_code: str):
         # Create secure connection with server and send email
         with smtplib.SMTP("smtp-relay.brevo.com", 587) as server:
             server.starttls()
-            # server.login("a919cd001@smtp-brevo.com", "YOUR_API_KEY_HERE") # Pulled from env in production
+            smtp_user = os.getenv("BREVO_SMTP_USER")
+            smtp_key = os.getenv("BREVO_SMTP_KEY")
+            if smtp_user and smtp_key and smtp_key != "YOUR_BREVO_SMTP_KEY_HERE":
+                server.login(smtp_user, smtp_key)
+            else:
+                print("WARNING: Using unauthenticated SMTP. Please set BREVO_SMTP_KEY in .env")
             server.sendmail(sender_email, receiver_email, message.as_string())
         print(f"Successfully sent OTP to {email}")
         return True
