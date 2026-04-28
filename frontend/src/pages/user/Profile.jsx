@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sidebar } from './Dashboard';
 import { useAuth } from '../../context/AuthContext';
 import { User, Shield, Key, CheckCircle, AlertCircle } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const Profile = () => {
   const { user, login } = useAuth();
@@ -9,11 +10,12 @@ const Profile = () => {
     name: user?.name || '',
     phone: user?.phone || '+91 ',
     worker_type: user?.worker_type || 'Freelancer',
+    photo_url: user?.photo_url || ''
   });
   
   const [securityData, setSecurityData] = useState({
     twoFaEnabled: user?.two_fa_enabled || false,
-    channel: 'email'
+    channel: user?.preferred_channel || 'email'
   });
 
   const [saving, setSaving] = useState(false);
@@ -24,7 +26,7 @@ const Profile = () => {
     setSaving(true);
     setSaveStatus(null);
     try {
-      const res = await fetch('http://localhost:8000/api/auth/profile', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -47,14 +49,34 @@ const Profile = () => {
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  const handleToggle2FA = async () => {
+  const updateSecuritySetting = async (updates) => {
     try {
-      const newState = !securityData.twoFaEnabled;
-      setSecurityData(prev => ({ ...prev, twoFaEnabled: newState }));
-      login({ ...user, two_fa_enabled: newState });
+      const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        login(data.user);
+      }
     } catch (err) {
-      console.warn("Toggle 2FA failed.", err);
+      console.warn("Security update failed:", err);
     }
+  };
+
+  const handleToggle2FA = async () => {
+    const newState = !securityData.twoFaEnabled;
+    setSecurityData(prev => ({ ...prev, twoFaEnabled: newState }));
+    login({ ...user, two_fa_enabled: newState });
+    await updateSecuritySetting({ two_fa_enabled: newState });
+  };
+
+  const handleChannelChange = async (newChannel) => {
+    setSecurityData(prev => ({ ...prev, channel: newChannel }));
+    login({ ...user, preferred_channel: newChannel });
+    await updateSecuritySetting({ preferred_channel: newChannel });
   };
 
   return (
@@ -87,6 +109,31 @@ const Profile = () => {
                 </div>
               )}
               
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '24px' }}>
+                 <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--bg-dark)', border: '2px solid var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {formData.photo_url ? <img src={formData.photo_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={40} color="var(--text-muted)" />}
+                 </div>
+                 <div>
+                    <label htmlFor="photoUpload" className="btn-secondary" style={{ display: 'inline-block', cursor: 'pointer', padding: '8px 16px', fontSize: '0.9rem' }}>
+                       Upload New Photo
+                    </label>
+                    <input 
+                       id="photoUpload" type="file" accept="image/*" style={{ display: 'none' }}
+                       onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                             const reader = new FileReader();
+                             reader.onloadend = () => {
+                                setFormData(prev => ({ ...prev, photo_url: reader.result }));
+                             };
+                             reader.readAsDataURL(file);
+                          }
+                       }}
+                    />
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px' }}>JPEG or PNG. Max 2MB.</p>
+                 </div>
+              </div>
+
               <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '500px' }}>
                 <div>
                   <label className="label">Full Name</label>
@@ -154,11 +201,11 @@ const Profile = () => {
                    <label className="label" style={{ marginBottom: '12px' }}>Preferred 2FA Channel</label>
                    <div style={{ display: 'flex', gap: '24px' }}>
                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                       <input type="radio" name="channel" checked={securityData.channel === 'email'} onChange={() => setSecurityData({...securityData, channel: 'email'})} style={{ accentColor: 'var(--brand-primary)', width: '18px', height: '18px'}}/>
+                       <input type="radio" name="channel" checked={securityData.channel === 'email'} onChange={() => handleChannelChange('email')} style={{ accentColor: 'var(--brand-primary)', width: '18px', height: '18px'}}/>
                        Email
                      </label>
                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                       <input type="radio" name="channel" checked={securityData.channel === 'sms'} onChange={() => setSecurityData({...securityData, channel: 'sms'})} style={{ accentColor: 'var(--brand-primary)', width: '18px', height: '18px'}}/>
+                       <input type="radio" name="channel" checked={securityData.channel === 'sms'} onChange={() => handleChannelChange('sms')} style={{ accentColor: 'var(--brand-primary)', width: '18px', height: '18px'}}/>
                        SMS (+91)
                      </label>
                    </div>

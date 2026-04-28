@@ -4,7 +4,15 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from passlib.context import CryptContext
 import re
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth
 
+try:
+    if not firebase_admin._apps:
+        cred = credentials.Certificate("firebase-service-account.json")
+        firebase_admin.initialize_app(cred)
+except Exception as e:
+    print(f"Warning: Firebase Admin SDK not initialized. Google Sign-In will fail. Error: {e}")
 import models
 from database import get_db
 from utils.jwt_utils import create_access_token, create_refresh_token, get_current_user
@@ -100,6 +108,8 @@ def signup_verify_otp(request: Request, response: Response, req: VerifyOTPReques
         
         return {
             "message": "Verified successfully",
+            "access_token": access_token,
+            "token_type": "bearer",
             "user": {
                 "id": user.id,
                 "name": user.name,
@@ -136,6 +146,8 @@ def signin(request: Request, response: Response, req: SigninRequest, db: Session
     
     return {
         "message": "Sign In successful",
+        "access_token": access_token,
+        "token_type": "bearer",
         "user": {
              "id": user.id,
              "name": user.name,
@@ -147,20 +159,27 @@ def signin(request: Request, response: Response, req: SigninRequest, db: Session
     }
 
 class GoogleSigninRequest(BaseModel):
-    email: str
-    name: str
+    token: str
 
 @router.post("/google")
 @limiter.limit("5/minute")
 def signin_google(request: Request, response: Response, req: GoogleSigninRequest, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == req.email).first()
+    try:
+        decoded_token = firebase_auth.verify_id_token(req.token)
+        email = decoded_token.get("email")
+        name = decoded_token.get("name", "Google User")
+    except Exception as e:
+        print("Firebase token verification error:", e)
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    user = db.query(models.User).filter(models.User.email == email).first()
     
     if not user:
         # Auto-register google users
         user = models.User(
-            name=req.name,
-            email=req.email,
-            phone="G_" + req.email, # Mock unique phone
+            name=name,
+            email=email,
+            phone="G_" + email, # Mock unique phone
             password_hash=pwd_context.hash("google_oauth_placeholder"),
             worker_type="salaried",
             status="active",
@@ -179,6 +198,8 @@ def signin_google(request: Request, response: Response, req: GoogleSigninRequest
     
     return {
         "message": "Google Sign In successful",
+        "access_token": access_token,
+        "token_type": "bearer",
         "user": {
              "id": user.id,
              "name": user.name,
@@ -203,22 +224,33 @@ def get_user_profile(user: models.User = Depends(get_current_user)):
         "phone": user.phone,
         "role": user.role,
         "worker_type": user.worker_type,
-        "two_fa_enabled": user.two_fa_enabled
+        "two_fa_enabled": user.two_fa_enabled,
+        "photo_url": user.photo_url
     }
 
 class ProfileUpdate(BaseModel):
     name: str = None
     phone: str = None
     worker_type: str = None
+    photo_url: str = None
+    two_fa_enabled: bool = None
+    preferred_channel: str = None
 
 @router.put("/profile")
 def update_profile(data: ProfileUpdate, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
-    if data.name:
+    if data.name is not None:
         user.name = data.name
-    if data.phone:
+    if data.phone is not None:
         user.phone = data.phone
-    if data.worker_type:
+    if data.worker_type is not None:
         user.worker_type = data.worker_type
+    if data.photo_url is not None:
+        user.photo_url = data.photo_url
+    if data.two_fa_enabled is not None:
+        user.two_fa_enabled = data.two_fa_enabled
+    if data.preferred_channel is not None:
+        user.preferred_channel = data.preferred_channel
+        
     db.commit()
     db.refresh(user)
     return {
@@ -229,6 +261,8 @@ def update_profile(data: ProfileUpdate, db: Session = Depends(get_db), user: mod
             "phone": user.phone,
             "role": user.role,
             "worker_type": user.worker_type,
-            "two_fa_enabled": user.two_fa_enabled
+            "two_fa_enabled": user.two_fa_enabled,
+            "preferred_channel": user.preferred_channel,
+            "photo_url": user.photo_url
         }
     }

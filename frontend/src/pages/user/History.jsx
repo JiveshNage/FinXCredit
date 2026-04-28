@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Sidebar } from './Dashboard';
 import { FileText, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config';
 
 export const History = () => {
   const { token } = useAuth();
@@ -12,7 +13,7 @@ export const History = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/applications/', {
+        const response = await fetch(`${API_BASE_URL}/api/applications/`, {
           headers: { 'Authorization': `Bearer ${token}` },
           credentials: 'include'
         });

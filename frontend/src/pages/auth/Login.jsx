@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import OtpInput from '../../components/auth/OtpInput';
 import { useAuth } from '../../context/AuthContext';
+import { auth, googleProvider } from '../../firebase';
+import { signInWithPopup } from 'firebase/auth';
 import { Mail, Lock } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,7 +22,7 @@ const Login = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:8000/api/auth/signin', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -97,6 +99,41 @@ const Login = () => {
 
               <button type="submit" className="btn-primary" style={{ marginTop: '10px' }} disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', margin: '10px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                <span style={{ margin: '0 10px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>or</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={async () => {
+                  try {
+                    const result = await signInWithPopup(auth, googleProvider);
+                    const idToken = await result.user.getIdToken();
+                    
+                    const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({ token: idToken })
+                    });
+                    
+                    if (!res.ok) throw new Error("Sign in failed");
+                    const data = await res.json();
+                    login(data.user);
+                    navigate('/dashboard');
+                  } catch (err) {
+                    console.error(err);
+                    setError("Google Sign-in failed.");
+                  }
+                }}
+                className="btn-secondary" 
+                style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', width: '100%', background: 'white', color: 'black', border: 'none' }}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" style={{ width: '20px', height: '20px' }} />
+                Sign in with Google
               </button>
             </form>
             

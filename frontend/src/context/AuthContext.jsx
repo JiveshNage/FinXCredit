@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/auth/me', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
           credentials: 'include' // This ensures HttpOnly Cookies are passed securely!
         });
         if (res.ok) {
@@ -44,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     
     // Ping backend to clear HttpOnly Cookies
     try {
-      await fetch('http://localhost:8000/api/auth/logout', { 
+      await fetch(`${API_BASE_URL}/api/auth/logout`, { 
         method: 'POST', 
         credentials: 'include' 
       });

@@ -3,82 +3,123 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, FileText, CheckCircle, Sliders, User as UserIcon, LogOut, 
-  Search, Bell, Plus, TrendingUp, TrendingDown, Activity, ArrowRight, Loader
+  Search, Bell, Plus, TrendingUp, TrendingDown, Activity, ArrowRight, Loader, Lightbulb, Menu, X, Zap
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { API_BASE_URL } from '../../config';
 
 const Sidebar = ({ current }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) setIsOpen(false);
+      else setIsOpen(true);
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
   const navs = [
-    { label: 'Overview', icon: <LayoutDashboard size={20}/>, path: '/dashboard', id: 'dashboard' },
-    { label: 'Apply Now', icon: <CheckCircle size={20}/>, path: '/apply', id: 'apply' },
-    { label: 'My Loans', icon: <FileText size={20}/>, path: '/history', id: 'history' },
-    { label: 'Credit Simulator', icon: <Sliders size={20}/>, path: '/eligibility', id: 'eligibility' },
-    { label: 'Profile', icon: <UserIcon size={20}/>, path: '/profile', id: 'profile' },
+    { label: 'Dashboard Overview', icon: <LayoutDashboard size={20}/>, path: '/dashboard', id: 'dashboard' },
+    { label: 'Check Eligibility', icon: <CheckCircle size={20}/>, path: '/apply', id: 'apply' },
+    { label: 'My Applications', icon: <FileText size={20}/>, path: '/history', id: 'history' },
+    { label: 'Score Simulator', icon: <Sliders size={20}/>, path: '/simulator', id: 'simulator' },
+    { label: 'Financial Tips', icon: <Lightbulb size={20}/>, path: '/tips', id: 'tips' },
+    { label: 'Profile Settings', icon: <UserIcon size={20}/>, path: '/profile', id: 'profile' },
   ];
 
   return (
-    <div style={{ 
-      width: '260px', 
-      borderRight: '1px solid var(--border-subtle)', 
-      background: 'rgba(0,0,0,0.2)', 
-      backdropFilter: 'blur(20px)',
-      display: 'flex', 
-      flexDirection: 'column', 
-      padding: '24px',
-      position: 'relative',
-      zIndex: 10
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '50px' }}>
-         <div style={{ background: 'var(--brand-gradient)', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Zap size={20} color="white" />
-         </div>
-         <h2 style={{ fontSize: '1.4rem', margin: 0 }}>CreditBridge</h2>
-      </div>
+    <>
+      {isMobile && !isOpen && (
+        <button 
+          onClick={() => setIsOpen(true)}
+          style={{
+             position: 'absolute', top: '20px', left: '20px', zIndex: 100,
+             background: 'rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)', 
+             color: 'white', borderRadius: '8px', padding: '8px', cursor: 'pointer',
+             backdropFilter: 'blur(10px)'
+          }}
+        >
+          <Menu size={24} />
+        </button>
+      )}
+
+      <div style={{ 
+        width: isOpen ? (isMobile ? '100%' : '260px') : (isMobile ? '0px' : '80px'), 
+        borderRight: '1px solid var(--border-subtle)', 
+        background: isMobile ? 'rgba(11,12,22,0.98)' : 'rgba(0,0,0,0.2)', 
+        backdropFilter: 'blur(20px)',
+        display: 'flex', 
+        flexDirection: 'column', 
+        padding: (isOpen || !isMobile) ? '24px 16px' : '0px',
+        position: isMobile ? 'absolute' : 'relative',
+        zIndex: 99,
+        height: '100vh',
+        overflow: 'hidden',
+        transition: 'width 0.3s ease-in-out, padding 0.3s ease-in-out'
+      }}>
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+             position: 'absolute', top: '24px', right: isOpen ? '16px' : '24px', 
+             background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
+             transition: 'right 0.3s'
+          }}
+        >
+          {isOpen ? <X size={20} /> : <Menu size={24} />}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '50px', marginTop: isOpen ? '0' : '40px', transition: 'all 0.3s' }}>
+           <div style={{ background: 'var(--brand-gradient)', minWidth: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap size={20} color="white" />
+           </div>
+           {isOpen && <h2 style={{ fontSize: '1.4rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden' }}>CreditBridge</h2>}
+        </div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px' }}>MAIN MENU</div>
+        {isOpen && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px' }}>MAIN MENU</div>}
         {navs.map(nav => (
-          <Link key={nav.id} to={nav.path} style={{
-            display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: '12px',
+          <Link key={nav.id} to={nav.path} title={!isOpen ? nav.label : ''} style={{
+            display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px',
             background: current === nav.id ? 'var(--brand-primary-glow)' : 'transparent',
             color: current === nav.id ? 'var(--text-primary)' : 'var(--text-secondary)',
             border: current === nav.id ? '1px solid var(--border-focus)' : '1px solid transparent',
             fontWeight: current === nav.id ? '600' : '500',
-            transition: 'all var(--transition-fast)'
+            transition: 'all var(--transition-fast)',
+            justifyContent: isOpen ? 'flex-start' : 'center'
           }}>
             <div style={{ color: current === nav.id ? 'var(--brand-secondary)' : 'inherit' }}>
               {nav.icon}
             </div>
-            {nav.label}
+            {isOpen && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>{nav.label}</span>}
           </Link>
         ))}
       </div>
       
-      <button onClick={handleLogout} style={{
-        display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: '12px',
+      <button onClick={handleLogout} title={!isOpen ? "Logout" : ""} style={{
+        display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px',
         background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-error)', border: '1px solid rgba(239, 68, 68, 0.2)', 
-        cursor: 'pointer', textAlign: 'left', fontFamily: 'Outfit', fontWeight: 'bold', transition: 'all 0.2s'
+        cursor: 'pointer', fontFamily: 'Outfit', fontWeight: 'bold', transition: 'all 0.2s',
+        justifyContent: isOpen ? 'flex-start' : 'center'
       }}>
-        <LogOut size={20}/> Logout
+        <LogOut size={20}/> {isOpen && <span>Logout</span>}
       </button>
     </div>
+    </>
   );
 };
-
-// SVG component to bypass missing Zap import in Sidebar
-const Zap = ({ size, color }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-  </svg>
-);
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -86,10 +127,15 @@ const Dashboard = () => {
   const [allApps, setAllApps] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Search states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearch, setShowSearch] = useState(false);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/applications/', {
+        const res = await fetch(`${API_BASE_URL}/api/applications/`, {
           credentials: 'include'
         });
         if (res.ok) {
@@ -107,6 +153,50 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      setShowSearch(false);
+      return;
+    }
+    
+    const term = searchTerm.toLowerCase();
+    const results = [];
+    
+    // Quick links
+    const quickLinks = [
+      { type: 'Page', title: 'Profile Settings', subtitle: 'Manage your account', path: '/profile', keywords: ['profile', 'account', 'settings'] },
+      { type: 'Page', title: 'Check Eligibility', subtitle: 'Apply for a new loan', path: '/apply', keywords: ['apply', 'loan', 'eligibility', 'new'] },
+      { type: 'Page', title: 'Score Simulator', subtitle: 'What-if scenarios', path: '/simulator', keywords: ['simulator', 'score', 'what if'] },
+      { type: 'Page', title: 'Financial Tips', subtitle: 'Improve your credit', path: '/tips', keywords: ['tips', 'financial', 'improve'] }
+    ];
+    
+    quickLinks.forEach(link => {
+      if (link.title.toLowerCase().includes(term) || link.keywords.some(k => k.includes(term))) {
+        results.push({ ...link });
+      }
+    });
+
+    // Search applications
+    allApps.forEach(app => {
+      if (
+        (app.decision && app.decision.toLowerCase().includes(term)) ||
+        (app.risk_level && app.risk_level.toLowerCase().includes(term)) ||
+        (app.score && app.score.toString().includes(term))
+      ) {
+        results.push({
+          type: 'Application',
+          title: `Application - ${app.decision}`,
+          subtitle: `Score: ${app.score} | Risk: ${app.risk_level}`,
+          path: `/results/${app.id}`
+        });
+      }
+    });
+    
+    setSearchResults(results.slice(0, 6));
+    setShowSearch(true);
+  }, [searchTerm, allApps]);
+
   // Build chart from real application history
   const chartData = allApps.slice(0, 6).reverse().map((app, i) => ({
     name: app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { month: 'short' }) : `App ${i+1}`,
@@ -122,12 +212,31 @@ const Dashboard = () => {
   const isAAVerified = latestApp?.is_aa_verified || false;
 
   // Estimate eligibility from score (simple mapping)
-  const estimatedEligibility = currentScore >= 80 ? '₹3,00,000' 
-    : currentScore >= 60 ? '₹1,50,000' 
-    : currentScore >= 40 ? '₹50,000'
-    : currentScore > 0 ? '₹25,000' : '—';
+  let estimatedEligibility = '—';
+  let loanRecText = '';
+  let tenureRec = '';
+  let emiRec = '';
+  let eligibilityPercent = 0;
 
-  const eligibilityPercent = Math.min(currentScore, 100);
+  if (currentScore >= 80) {
+    estimatedEligibility = '₹1,00,000 – ₹5,00,000';
+    loanRecText = 'Eligible for ₹1,00,000 – ₹5,00,000';
+    tenureRec = '12 - 24 months';
+    emiRec = '₹4,500 - ₹22,000 / month';
+    eligibilityPercent = 100;
+  } else if (currentScore >= 60) {
+    estimatedEligibility = '₹10,000 – ₹50,000';
+    loanRecText = 'Eligible for ₹10,000 – ₹50,000';
+    tenureRec = '3 - 6 months';
+    emiRec = '₹1,800 - ₹8,500 / month';
+    eligibilityPercent = 10;
+  } else if (currentScore > 0) {
+    estimatedEligibility = '—';
+    loanRecText = 'Currently not eligible. See tips below.';
+    tenureRec = 'N/A';
+    emiRec = 'N/A';
+    eligibilityPercent = 0;
+  }
 
   return (
     <div className="app-container" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -147,7 +256,7 @@ const Dashboard = () => {
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
             <h1 style={{ fontSize: '2.2rem' }}>Dashboard</h1>
-            <Link to="/apply" className="btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem' }}>
+            <Link to="/loan-apply" className="btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem' }}>
               <Plus size={18} /> New Loan
             </Link>
           </div>
@@ -260,19 +369,54 @@ const Dashboard = () => {
         {/* Right Column: Stats Side Panel */}
         <div style={{ width: '380px', padding: '40px 30px', overflowY: 'auto', background: 'rgba(0,0,0,0.1)', backdropFilter: 'blur(10px)', position: 'relative', zIndex: 10 }}>
           
-          {/* Top Bar (Search & Profile) */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '50px' }}>
-             <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px 16px', borderRadius: '100px', border: '1px solid var(--border-subtle)', flex: 1, marginRight: '16px' }}>
+           {/* Top Bar (Search & Profile) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '50px', position: 'relative' }}>
+             <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px 16px', borderRadius: '100px', border: '1px solid var(--border-subtle)', flex: 1, marginRight: '16px', position: 'relative' }}>
                <Search size={16} color="var(--text-secondary)" style={{ marginRight: '8px' }} />
-               <input type="text" placeholder="Search..." style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%', fontSize: '0.9rem' }} />
+               <input 
+                 type="text" 
+                 placeholder="Search..." 
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 onFocus={() => searchTerm.trim() && setShowSearch(true)}
+                 onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+                 style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%', fontSize: '0.9rem' }} 
+               />
+               
+               {/* Search Results Dropdown */}
+               {showSearch && (
+                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', background: 'rgba(11, 12, 22, 0.95)', border: '1px solid var(--border-subtle)', borderRadius: '12px', backdropFilter: 'blur(10px)', padding: '8px 0', zIndex: 100, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+                   {searchResults.length > 0 ? (
+                     searchResults.map((res, i) => (
+                       <Link 
+                         key={i} 
+                         to={res.path} 
+                         style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', textDecoration: 'none', color: 'white', transition: 'background 0.2s' }}
+                         onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                         onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                       >
+                         <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px' }}>
+                           {res.type === 'Page' ? <Search size={16} color="var(--brand-secondary)" /> : <FileText size={16} color="var(--status-success)" />}
+                         </div>
+                         <div>
+                           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{res.title}</div>
+                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{res.subtitle}</div>
+                         </div>
+                       </Link>
+                     ))
+                   ) : (
+                     <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>No results found</div>
+                   )}
+                 </div>
+               )}
              </div>
              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <div style={{ position: 'relative', cursor: 'pointer' }} title="No new notifications">
+                <Link to="/notifications" style={{ position: 'relative', cursor: 'pointer' }} title="Notifications">
                   <Bell size={20} color="var(--text-secondary)" style={{ transition: 'color 0.2s' }} onMouseOver={e => e.target.style.color = 'var(--brand-secondary)'} onMouseOut={e => e.target.style.color = 'var(--text-secondary)'} />
                   <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--status-success)', border: '2px solid var(--bg-primary)' }}></div>
-                </div>
-                <Link to="/profile" style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-elevated)', border: '2px solid var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.2s, transform 0.2s' }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--brand-secondary)'; e.currentTarget.style.transform = 'scale(1.05)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--brand-primary)'; e.currentTarget.style.transform = 'scale(1)'; }}>
-                  <UserIcon size={20} />
+                </Link>
+                <Link to="/profile" style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-elevated)', border: '2px solid var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.2s, transform 0.2s', overflow: 'hidden' }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--brand-secondary)'; e.currentTarget.style.transform = 'scale(1.05)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--brand-primary)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                  {user?.photo_url ? <img src={user.photo_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <UserIcon size={20} />}
                 </Link>
              </div>
           </div>
@@ -320,23 +464,40 @@ const Dashboard = () => {
              </div>
           </div>
 
-          {/* Loan Suggestion Card */}
-          <div className="glass-card" style={{ 
-            background: 'linear-gradient(180deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.4))',
-            padding: '30px', border: '1px solid rgba(255,255,255,0.1)', position: 'relative', overflow: 'hidden'
-          }}>
-             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40px', background: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%238b5cf6\' fill-opacity=\'0.5\' d=\'M0,160L48,144C96,128,192,96,288,106.7C384,117,480,171,576,170.7C672,171,768,117,864,106.7C960,96,1056,128,1152,144C1248,160,1344,160,1392,160L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z\'%3E%3C/path%3E%3C/svg%3E")', backgroundSize: 'cover' }}></div>
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', position: 'relative', zIndex: 2 }}>
-                <span style={{ fontWeight: 600 }}>Loan Suggestion</span>
-                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '100px', fontSize: '0.8rem' }}>
-                  {allApps.length} App{allApps.length !== 1 ? 's' : ''}
-                </div>
-             </div>
-             <h2 style={{ fontSize: '2rem', marginBottom: '8px', position: 'relative', zIndex: 2 }}>{loanSuggestion}</h2>
-             <Link to="/history" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'white', fontSize: '0.9rem', position: 'relative', zIndex: 2 }}>
-                View All Applications <ArrowRight size={16} />
-             </Link>
-          </div>
+          {/* Loan Recommendation Box */}
+          {latestApp && (
+            <div className="glass-card" style={{ 
+              background: currentScore >= 60 
+                ? 'linear-gradient(180deg, rgba(16, 185, 129, 0.15), rgba(6, 95, 70, 0.4))'
+                : 'linear-gradient(180deg, rgba(239, 68, 68, 0.15), rgba(153, 27, 27, 0.4))',
+              padding: '30px', border: '1px solid rgba(255,255,255,0.1)', position: 'relative', overflow: 'hidden',
+              marginTop: '16px'
+            }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', position: 'relative', zIndex: 2 }}>
+                  <span style={{ fontWeight: 600 }}>Loan Recommendation</span>
+               </div>
+               <h2 style={{ fontSize: '1.8rem', marginBottom: '16px', position: 'relative', zIndex: 2, color: currentScore >= 60 ? 'var(--status-success)' : 'var(--status-error)' }}>
+                 {loanRecText}
+               </h2>
+               
+               {currentScore >= 60 && (
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', position: 'relative', zIndex: 2, marginBottom: '20px' }}>
+                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px' }}>
+                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Suggested Tenure</div>
+                     <div style={{ fontWeight: 'bold' }}>{tenureRec}</div>
+                   </div>
+                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px' }}>
+                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Estimated EMI</div>
+                     <div style={{ fontWeight: 'bold' }}>{emiRec}</div>
+                   </div>
+                 </div>
+               )}
+
+               <Link to="/history" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'white', fontSize: '0.9rem', position: 'relative', zIndex: 2 }}>
+                  View All Applications <ArrowRight size={16} />
+               </Link>
+            </div>
+          )}
 
         </div>
       </div>

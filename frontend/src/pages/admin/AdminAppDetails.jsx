@@ -161,6 +161,29 @@ const AdminAppDetails = () => {
             </div>
         </div>
         
+        {/* Formal Loan Request (Fulfillment) */}
+        {appData.requested_amount && (
+          <div style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.05))', borderRadius: '12px', padding: '20px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+              <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid rgba(59, 130, 246, 0.2)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6' }}><FileText size={18} /> Formal Loan Request</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ color: '#94a3b8' }}>Requested Amount</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#10b981' }}>₹{appData.requested_amount.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ color: '#94a3b8' }}>Tenure</span>
+                  <span style={{ fontWeight: 'bold' }}>{appData.requested_tenure} Months</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ color: '#94a3b8' }}>Purpose</span>
+                  <span style={{ fontWeight: 'bold' }}>{appData.loan_purpose}</span>
+              </div>
+              <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</span>
+                  <div style={{ fontWeight: 'bold', color: '#3b82f6', marginTop: '4px' }}>{appData.fulfillment_status}</div>
+              </div>
+          </div>
+        )}
+        
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>

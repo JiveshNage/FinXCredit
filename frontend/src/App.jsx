@@ -8,13 +8,15 @@ import Signup from './pages/auth/Signup';
 import Dashboard from './pages/user/Dashboard';
 import Apply from './pages/user/Apply';
 import Results from './pages/user/Results';
-import Simulator from './pages/user/Simulator'; // We will create this as a separate file
-import Profile from './pages/user/Profile'; // Same
+import Simulator from './pages/user/Simulator';
+import Profile from './pages/user/Profile';
 import { History } from './pages/user/History';
 import Eligibility from './pages/user/Eligibility';
+import Tips from './pages/user/Tips';
+import LoanApply from './pages/user/LoanApply';
+import Notifications from './pages/user/Notifications';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminLogin from './pages/admin/AdminLogin';
 import AdminAppDetails from './pages/admin/AdminAppDetails';
 
 // Mock Auth Context (we will implement properly in contexts/)
@@ -48,9 +50,11 @@ function App() {
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="/eligibility" element={<ProtectedRoute><Eligibility /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/tips" element={<ProtectedRoute><Tips /></ProtectedRoute>} />
+          <Route path="/loan-apply" element={<ProtectedRoute><LoanApply /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
 
           {/* Admin Routes */}
-          <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/admin/application/:id" element={<ProtectedRoute adminOnly={true}><AdminAppDetails /></ProtectedRoute>} />
         </Routes>

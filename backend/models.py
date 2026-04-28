@@ -18,6 +18,7 @@ class User(Base):
     password_hash = Column(String)
     worker_type = Column(String) # delivery/freelancer/street_vendor
     role = Column(String, default="user") # 'user' or 'admin'
+    photo_url = Column(Text, nullable=True)
     
     # OTP/2FA specifics
     status = Column(String, default="pending_verification") # pending_verification, active, suspended
@@ -94,6 +95,20 @@ class LoanApplicationDB(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="applications")
+
+
+class LoanFulfillment(Base):
+    __tablename__ = "loan_fulfillments"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    application_id = Column(Integer, ForeignKey("loan_applications.id"))
+    user_id = Column(String, ForeignKey("users.id"))
+    amount = Column(Float)
+    tenure = Column(Integer)
+    purpose = Column(String)
+    status = Column(String, default="Pending Disbursement")
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class OtpRecord(Base):

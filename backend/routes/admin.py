@@ -97,6 +97,9 @@ def get_application_details(app_id: int, db: Session = Depends(get_db), admin: m
         
     user = app.user
     
+    # Check if there's a formal loan fulfillment request
+    fulfillment = db.query(models.LoanFulfillment).filter(models.LoanFulfillment.application_id == str(app.id)).first()
+    
     return {
         "id": app.id,
         "user_id": user.id,
@@ -114,7 +117,11 @@ def get_application_details(app_id: int, db: Session = Depends(get_db), admin: m
         "decision": app.decision,
         "cibil_equivalent": app.cibil_score,
         "factors_json": app.factors_json,
-        "date": app.created_at
+        "date": app.created_at,
+        "requested_amount": fulfillment.amount if fulfillment else None,
+        "requested_tenure": fulfillment.tenure if fulfillment else None,
+        "loan_purpose": fulfillment.purpose if fulfillment else None,
+        "fulfillment_status": fulfillment.status if fulfillment else None
     }
 
 @router.post("/notify-user")

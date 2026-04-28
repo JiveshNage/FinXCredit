@@ -304,6 +304,47 @@ def submit_application(data: ApplicationSubmit, request: Request, db: Session = 
         "score_results": score_data
     }
 
+class FulfillSubmit(BaseModel):
+    application_id: str
+    amount: float
+    tenure: int
+    purpose: str
+
+@router.post("/fulfill")
+def fulfill_loan(data: FulfillSubmit, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Verify the application exists and belongs to the user
+    app = db.query(models.LoanApplicationDB).filter(
+        models.LoanApplicationDB.id == data.application_id,
+        models.LoanApplicationDB.user_id == current_user.id
+    ).first()
+    
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+        
+    if app.decision != "Approved":
+        raise HTTPException(status_code=400, detail="Cannot fulfill a loan that is not Approved")
+
+    # Update app decision
+    app.decision = "Offer Accepted"
+    
+    # Create Fulfillment Record
+    fulfillment = models.LoanFulfillment(
+        application_id=app.id,
+        user_id=current_user.id,
+        amount=data.amount,
+        tenure=data.tenure,
+        purpose=data.purpose
+    )
+    db.add(fulfillment)
+    db.commit()
+    db.refresh(fulfillment)
+    
+    return {
+        "success": True,
+        "message": "Loan application formally submitted for disbursement.",
+        "fulfillment_id": fulfillment.id
+    }
+
 @router.post("/eligibility-check")
 def check_eligibility(data: EligibilityCheck, request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Fetch data from fake APIs, store in DB, and check eligibility"""
@@ -414,6 +455,78 @@ def get_my_applications(db: Session = Depends(get_db), current_user: models.User
         "cibil_score": a.cibil_score,
         "is_aa_verified": a.is_aa_verified
     } for a in apps]
+
+@router.get("/latest-tips")
+def get_latest_tips(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    app = db.query(models.LoanApplicationDB).filter(models.LoanApplicationDB.user_id == current_user.id).order_by(models.LoanApplicationDB.created_at.desc()).first()
+    
+    if not app or not app.tips_json:
+        return {"tips": []}
+        
+    try:
+        tips = json.loads(app.tips_json)
+        return {"tips": tips}
+    except:
+        return {"tips": []}
+
+@router.get("/notifications")
+def get_user_notifications(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    apps = db.query(models.LoanApplicationDB).filter(models.LoanApplicationDB.user_id == current_user.id).order_by(models.LoanApplicationDB.created_at.desc()).all()
+    
+    notifications = []
+    
+    if not apps:
+        notifications.append({
+            "id": "welcome",
+            "type": "info",
+            "title": "Welcome to CreditBridge",
+            "message": "Complete your profile and submit your first loan application to get started.",
+            "time": "Just now",
+            "is_read": False
+        })
+    else:
+        for idx, app in enumerate(apps):
+            if idx >= 5: break
+            time_str = app.created_at.strftime("%b %d, %Y") if app.created_at else "Recently"
+            
+            if app.decision == "Approved":
+                notifications.append({
+                    "id": f"app_{app.id}_success",
+                    "type": "success",
+                    "title": "Loan Application Approved",
+                    "message": f"Good news! Your application (Score: {app.score}) was approved. {app.loan_suggestion}",
+                    "time": time_str,
+                    "is_read": False
+                })
+            elif app.decision == "Rejected":
+                notifications.append({
+                    "id": f"app_{app.id}_reject",
+                    "type": "error",
+                    "title": "Application Rejected",
+                    "message": "Your application was unfortunately rejected. Please check your Financial Tips to improve your score.",
+                    "time": time_str,
+                    "is_read": False
+                })
+            else:
+                notifications.append({
+                    "id": f"app_{app.id}_review",
+                    "type": "warning",
+                    "title": "Application Under Review",
+                    "message": f"Your application is currently flagged as {app.risk_level}. We will notify you once a final decision is made.",
+                    "time": time_str,
+                    "is_read": False
+                })
+                
+    notifications.append({
+        "id": "system_sec",
+        "type": "info",
+        "title": "Security Update",
+        "message": "We have updated our privacy policy and security measures. Your data is encrypted.",
+        "time": "System",
+        "is_read": True
+    })
+    
+    return notifications
 
 @router.get("/{app_id}")
 def get_application_details(app_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

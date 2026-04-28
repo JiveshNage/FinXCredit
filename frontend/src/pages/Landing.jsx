@@ -1,9 +1,18 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Brain, Zap, Clock, TrendingUp, ChevronRight, Activity, CreditCard, User, CheckCircle, Lock, Smartphone, LineChart, Users, Award, PhoneCall, Mail } from 'lucide-react';
+import { ShieldCheck, Brain, Zap, Clock, TrendingUp, ChevronRight, Activity, CreditCard, User, CheckCircle, Lock, Smartphone, LineChart, Users, Award, PhoneCall, Mail, Menu, X } from 'lucide-react';
 
 const Landing = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="landing-page" style={{ position: 'relative', overflow: 'hidden' }}>
       
@@ -22,17 +31,42 @@ const Landing = () => {
           <h2 style={{ fontSize: '1.6rem', margin: 0 }}>CreditBridge</h2>
         </div>
         
-        <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-           <div style={{ display: 'flex', gap: '24px', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }} className="nav-links">
-             <a href="#how-it-works" style={{cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s'}} onMouseOver={e => e.target.style.color='var(--text-primary)'} onMouseOut={e => e.target.style.color='var(--text-secondary)'}>Products</a>
-             <a href="#trust" style={{cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s'}} onMouseOver={e => e.target.style.color='var(--text-primary)'} onMouseOut={e => e.target.style.color='var(--text-secondary)'}>Security</a>
-             <a href="#contact" style={{cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s'}} onMouseOver={e => e.target.style.color='var(--text-primary)'} onMouseOut={e => e.target.style.color='var(--text-secondary)'}>API & Support</a>
-           </div>
-           <div style={{ display: 'flex', gap: '16px' }}>
-            <Link to="/login" className="btn-secondary" style={{ padding: '10px 24px' }}>Log In</Link>
-            <Link to="/signup" className="btn-primary" style={{ padding: '10px 24px' }}>Get Started</Link>
+        {isMobile ? (
+          <>
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+            <AnimatePresence>
+              {isMenuOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  style={{ position: 'absolute', top: '80px', left: '5%', right: '5%', background: 'rgba(11, 12, 22, 0.95)', backdropFilter: 'blur(10px)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '20px', zIndex: 100 }}
+                >
+                  <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Products</a>
+                  <a href="#trust" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Security</a>
+                  <a href="#contact" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-primary)', fontWeight: 500 }}>API & Support</a>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }}></div>
+                  <Link to="/login" className="btn-secondary" style={{ textAlign: 'center' }} onClick={() => setIsMenuOpen(false)}>Log In</Link>
+                  <Link to="/signup" className="btn-primary" style={{ textAlign: 'center' }} onClick={() => setIsMenuOpen(false)}>Get Started</Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        ) : (
+          <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+             <div style={{ display: 'flex', gap: '24px', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }} className="nav-links">
+               <a href="#how-it-works" style={{cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s'}} onMouseOver={e => e.target.style.color='var(--text-primary)'} onMouseOut={e => e.target.style.color='var(--text-secondary)'}>Products</a>
+               <a href="#trust" style={{cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s'}} onMouseOver={e => e.target.style.color='var(--text-primary)'} onMouseOut={e => e.target.style.color='var(--text-secondary)'}>Security</a>
+               <a href="#contact" style={{cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s'}} onMouseOver={e => e.target.style.color='var(--text-primary)'} onMouseOut={e => e.target.style.color='var(--text-secondary)'}>API & Support</a>
+             </div>
+             <div style={{ display: 'flex', gap: '16px' }}>
+              <Link to="/login" className="btn-secondary" style={{ padding: '10px 24px' }}>Log In</Link>
+              <Link to="/signup" className="btn-primary" style={{ padding: '10px 24px' }}>Get Started</Link>
+            </div>
           </div>
-        </div>
+        )}
       </nav>
 
       {/* Live Activity Ticker */}
