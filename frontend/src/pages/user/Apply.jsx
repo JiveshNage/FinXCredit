@@ -12,6 +12,20 @@ const Apply = () => {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+  const validateFile = (file, allowedTypes, allowedExtensions = []) => {
+    if (!file) return "No file selected.";
+    if (file.size > MAX_FILE_SIZE) return "File size must be 5MB or smaller.";
+    if (allowedTypes.length && !allowedTypes.some(type => file.type.includes(type))) {
+      const ext = file.name.split('.').pop();
+      if (!allowedExtensions.includes(ext.toLowerCase())) {
+        return "Unsupported file type.";
+      }
+    }
+    return null;
+  };
+
   // KYC Files
   const [panFile, setPanFile] = useState(null);
   const [aadhaarFile, setAadhaarFile] = useState(null);
@@ -23,8 +37,9 @@ const Apply = () => {
 
   const handlePanUpload = async (e) => {
     e.preventDefault();
-    if (!panFile) { setError("Please upload a PAN card image."); return; }
-    
+    const fileError = validateFile(panFile, ['image']);
+    if (fileError) { setError(`PAN upload issue: ${fileError}`); return; }
+
     setError(null); setLoading(true); setLoadingText("Running OCR on PAN Image...");
     const formData = new FormData();
     formData.append("file", panFile);
@@ -43,7 +58,8 @@ const Apply = () => {
 
   const handleAadhaarUpload = async (e) => {
     e.preventDefault();
-    if (!aadhaarFile) { setError("Please upload Aadhaar Offline XML zip."); return; }
+    const fileError = validateFile(aadhaarFile, [], ['xml', 'zip']);
+    if (fileError) { setError(`Aadhaar upload issue: ${fileError}`); return; }
 
     setError(null); setLoading(true); setLoadingText("Parsing Aadhaar XML & Verifying Signature...");
     const formData = new FormData();
@@ -75,6 +91,13 @@ const Apply = () => {
       setError("Please upload your bank statement CSV.");
       return;
     }
+    if (!declaredIncome || !declaredExpenses || Number(declaredIncome) <= 0 || Number(declaredExpenses) <= 0) {
+      setError("Declared income and expenses must be positive values.");
+      return;
+    }
+    const fileError = validateFile(bankFile, [], ['csv']);
+    if (fileError) { setError(`Bank statement upload issue: ${fileError}`); return; }
+
     setError(null); setLoading(true);
     setLoadingText("Parsing Bank CSV and Running NLP Transaction Categorizer...");
     

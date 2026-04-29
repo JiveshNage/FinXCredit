@@ -34,8 +34,9 @@ const Sidebar = ({ current }) => {
   const navs = [
     { label: 'Dashboard Overview', icon: <LayoutDashboard size={20}/>, path: '/dashboard', id: 'dashboard' },
     { label: 'Check Eligibility', icon: <CheckCircle size={20}/>, path: '/apply', id: 'apply' },
+    { label: 'Loan Application', icon: <Wallet size={20}/>, path: '/loan-apply', id: 'loan-apply' },
+    { label: 'Score Simulator', icon: <TrendingUp size={20}/>, path: '/eligibility', id: 'eligibility' },
     { label: 'My Applications', icon: <FileText size={20}/>, path: '/history', id: 'history' },
-    { label: 'Score Simulator', icon: <Sliders size={20}/>, path: '/simulator', id: 'simulator' },
     { label: 'Financial Tips', icon: <Lightbulb size={20}/>, path: '/tips', id: 'tips' },
     { label: 'Profile Settings', icon: <UserIcon size={20}/>, path: '/profile', id: 'profile' },
   ];

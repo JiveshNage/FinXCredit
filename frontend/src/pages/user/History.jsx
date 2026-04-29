@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sidebar } from './Dashboard';
 import { FileText, ChevronRight } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config';
 
 export const History = () => {
-  const { token } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,7 +12,6 @@ export const History = () => {
     const fetchHistory = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/applications/`, {
-          headers: { 'Authorization': `Bearer ${token}` },
           credentials: 'include'
         });
         if (response.ok) {
@@ -38,7 +35,7 @@ export const History = () => {
       setLoading(false);
     };
     fetchHistory();
-  }, [token]);
+  }, []);
 
   const formatDate = (ds) => {
     return new Date(ds).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });

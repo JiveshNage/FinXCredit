@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { Shield, Loader, CheckCircle, AlertTriangle, FileText, Info, TrendingUp, Wallet, Landmark } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { Sidebar } from './Dashboard';
 import { API_BASE_URL } from '../../config';
 
 const Eligibility = () => {
-  const { token } = useAuth();
   const [formData, setFormData] = useState({
     income: 25000,
     expenses: 12000,
@@ -28,8 +26,7 @@ const Eligibility = () => {
       const res = await fetch(`${API_BASE_URL}/api/applications/simulate`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify(formData)

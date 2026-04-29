@@ -69,7 +69,7 @@ const LoanApply = () => {
       
       setStep(2); // Move to success screen
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
     }
     setSubmitting(false);
   };
@@ -80,7 +80,7 @@ const LoanApply = () => {
       <div className="bg-orb bg-orb-2" style={{ bottom: '-10%', right: '10%' }}></div>
       <div className="grid-bg"></div>
 
-      <Sidebar current="dashboard" />
+      <Sidebar current="loan-apply" />
       
       <div style={{ flex: 1, padding: '40px', overflowY: 'auto', position: 'relative', zIndex: 10 }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>

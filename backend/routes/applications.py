@@ -5,17 +5,24 @@ import os
 import joblib
 import pandas as pd
 import json
+import logging
 from datetime import datetime
 
 import models
 from database import get_db
 from utils.jwt_utils import get_current_user, get_admin_user
 from services.scoring_engine import calculate_score
-from services.kyc_service import simulate_pan_verification, simulate_aadhaar_verification, hash_kyc_data, extract_pan_ocr, parse_aadhaar_xml
+from services.kyc_service import simulate_pan_verification, simulate_aadhaar_verification, hash_kyc_data, extract_pan_ocr, parse_aadhaar_xml, validate_pan, validate_aadhaar, mock_uidai_ping
 from services.aa_service import fetch_aa_bank_statements, parse_bank_csv
-from services.aa_service import fetch_aa_bank_statements
 from services.bureau_service import fetch_cibil_report
 from models import AadhaarData, PanData, BankStatement, BankTransaction
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -24,7 +31,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, 'ml_models', 'loan_model.pkl')
 try:
     ml_model = joblib.load(MODEL_PATH)
-except:
+    logger.info("ML model loaded successfully from %s", MODEL_PATH)
+except Exception as e:
+    logger.error("Failed to load ML model from %s: %s", MODEL_PATH, str(e))
     ml_model = None
 
 class KYCSubmit(BaseModel):
@@ -132,8 +141,10 @@ async def upload_aadhaar_xml(file: UploadFile = File(...), db: Session = Depends
     if not res["success"]:
         raise HTTPException(status_code=400, detail=res["message"])
         
-    # We use a mock hash since XML doesn't explicitly expose the full Aadhaar number easily
-    aadhaar_hash = hash_kyc_data(res["data"]["name"]) 
+    # Hash based on Aadhaar metadata (name + DOB) since XML doesn't expose raw Aadhaar number
+    # This prevents name-only collisions and provides better security
+    aadhaar_identifiable_data = f"{res['data']['name']}{res['data'].get('dob', '')}"
+    aadhaar_hash = hash_kyc_data(aadhaar_identifiable_data) 
     aadhaar_data = AadhaarData(
         user_id=current_user.id,
         aadhaar_number_hash=aadhaar_hash,
@@ -146,6 +157,71 @@ async def upload_aadhaar_xml(file: UploadFile = File(...), db: Session = Depends
     current_user.kyc_verified = True
     db.commit()
     return res["data"]
+
+@router.post("/kyc-submit")
+def kyc_submit(data: KYCSubmit, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """
+    Consolidated KYC submission endpoint that verifies both PAN and Aadhaar in a single call.
+    This endpoint is used by the frontend to complete KYC verification efficiently.
+    """
+    # Verify PAN
+    if not validate_pan(data.pan_number):
+        logger.warning("Invalid PAN format attempted by user %s: %s", current_user.id, data.pan_number)
+        raise HTTPException(status_code=400, detail="Invalid PAN format. Expected: 5 Letters, 4 Numbers, 1 Letter")
+    
+    pan_res = simulate_pan_verification(data.pan_number)
+    if not pan_res["success"]:
+        logger.warning("PAN verification failed for user %s: %s", current_user.id, pan_res.get("message"))
+        raise HTTPException(status_code=400, detail=pan_res["message"])
+    
+    # Verify Aadhaar
+    if not validate_aadhaar(data.aadhaar_number):
+        logger.warning("Invalid Aadhaar format attempted by user %s", current_user.id)
+        raise HTTPException(status_code=400, detail="Invalid Aadhaar number. Must be 12 digits.")
+    
+    aadhaar_res = simulate_aadhaar_verification(data.aadhaar_number, "123456")  # Mock OTP for simulation
+    if not aadhaar_res["success"]:
+        logger.warning("Aadhaar verification failed for user %s: %s", current_user.id, aadhaar_res.get("message"))
+        raise HTTPException(status_code=400, detail=aadhaar_res["message"])
+    
+    # Store PAN data
+    pan_data = PanData(
+        user_id=current_user.id,
+        pan_number=data.pan_number,
+        name=pan_res["data"]["name"],
+        verified=True
+    )
+    db.add(pan_data)
+    
+    # Store Aadhaar data with secure hash
+    aadhaar_hash = hash_kyc_data(data.aadhaar_number)
+    aadhaar_data = AadhaarData(
+        user_id=current_user.id,
+        aadhaar_number_hash=aadhaar_hash,
+        name=aadhaar_res["data"].get("name", current_user.name),
+        verified=True
+    )
+    db.add(aadhaar_data)
+    
+    # Update user with verified credentials
+    current_user.pan_number = data.pan_number
+    current_user.aadhaar_hash = aadhaar_hash
+    current_user.kyc_verified = True
+    
+    db.commit()
+    
+    logger.info("KYC verification completed successfully for user %s", current_user.id)
+    
+    return {
+        "success": True,
+        "message": "KYC verification completed successfully",
+        "pan_verified": True,
+        "aadhaar_verified": True,
+        "data": {
+            "pan_name": pan_res["data"]["name"],
+            "kyc_status": "Verified"
+        }
+    }
 
 @router.post("/bank/fetch")
 def fetch_bank_data(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -173,9 +249,17 @@ def _save_bank_data(db, current_user, aa_data):
     
     # Store transactions
     for txn in aa_data.get("transactions", []):
+        # Parse date string to datetime if it's a string
+        txn_date = txn.get("date")
+        if isinstance(txn_date, str):
+            try:
+                txn_date = datetime.fromisoformat(txn_date)
+            except ValueError:
+                txn_date = datetime.utcnow()  # Fallback to current time
+        
         db_txn = BankTransaction(
             user_id=current_user.id,
-            date=txn["date"],
+            date=txn_date,
             amount=txn["amount"],
             type=txn["type"],
             category=txn["category"],
@@ -253,7 +337,7 @@ def submit_application(data: ApplicationSubmit, request: Request, db: Session = 
                 score_data["risk"] = "Medium Risk"
                 score_data["flags"].append(f"ML Override: Risk exceeds dynamic threshold {threshold} for segment")
         except Exception as e:
-            print("ML Error:", e)
+            logger.error("ML model prediction failed: %s", str(e), exc_info=True)
 
     if cibil_score and cibil_score < 600:
          score_data["decision"] = "Rejected"
@@ -429,7 +513,7 @@ def check_eligibility(data: EligibilityCheck, request: Request, db: Session = De
             if prob_default > threshold and score_data["decision"] == "Approved":
                 score_data["decision"] = "Medium Risk"
         except Exception as e:
-            print("ML Error:", e)
+            logger.error("ML model prediction failed in eligibility check: %s", str(e), exc_info=True)
 
     if cibil_score and cibil_score < 600:
         score_data["decision"] = "Rejected"

@@ -191,11 +191,37 @@ class BankTransaction(Base):
     __tablename__ = "bank_transactions"
     id = Column(String, primary_key=True, default=generate_uuid)
     user_id = Column(String, ForeignKey("users.id"))
-    date = Column(String)
+    date = Column(DateTime)  # Fixed: Changed from String to DateTime for data integrity
     amount = Column(Float)
     type = Column(String) # 'CREDIT' or 'DEBIT'
     category = Column(String) # 'Salary', 'UPI', 'Utilities', etc.
     description = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="transactions")
+
+class TrustworthyPerson(Base):
+    __tablename__ = "trustworthy_people"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    name = Column(String, nullable=False)
+    occupation = Column(String, nullable=False)
+    location = Column(String, nullable=False)
+    testimonial = Column(Text, nullable=False)
+    rating = Column(Integer, default=5)  # 1-5 stars
+    is_featured = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    admin_id = Column(String, ForeignKey("users.id"))
+    target_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    target_app_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=True)
+    action_type = Column(String)  # NOTIFICATION_SENT, MANUAL_OVERRIDE, etc.
+    details = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="transactions")

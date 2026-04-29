@@ -7,7 +7,7 @@ import { API_BASE_URL } from '../../config';
 const AdminAppDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   
   const [appData, setAppData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,10 +17,13 @@ const AdminAppDetails = () => {
   const [notifyMsg, setNotifyMsg] = useState('');
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [notifySuccess, setNotifySuccess] = useState('');
+  const [notifyError, setNotifyError] = useState('');
   
   // Override State
   const [overrideReason, setOverrideReason] = useState('');
   const [overrideLoading, setOverrideLoading] = useState(false);
+  const [overrideSuccess, setOverrideSuccess] = useState('');
+  const [overrideError, setOverrideError] = useState('');
 
   useEffect(() => {
     fetchAppDetails();
@@ -30,7 +33,7 @@ const AdminAppDetails = () => {
   const fetchAppDetails = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/application/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include'
       });
       if (res.status === 401 || res.status === 403) {
          logout(); navigate('/admin-login'); return;
@@ -47,11 +50,12 @@ const AdminAppDetails = () => {
 
   const handleNotify = async (e) => {
     e.preventDefault();
-    setNotifyLoading(true); setNotifySuccess('');
+    setNotifyLoading(true); setNotifySuccess(''); setNotifyError('');
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/notify-user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ user_id: appData.user_id, channel: notifyChannel, message: notifyMsg })
       });
       if (!res.ok) throw new Error('Notification failed');
@@ -59,27 +63,30 @@ const AdminAppDetails = () => {
       setNotifyMsg('');
     } catch (err) {
       console.error(err);
-      alert("Failed to send notification: " + err.message);
+      setNotifyError("Failed to send notification: " + err.message);
     } finally {
       setNotifyLoading(false);
     }
   };
 
   const handleOverride = async (newDecision) => {
-    if (!overrideReason) { alert("Must provide a reason for the audit log."); return; }
+    if (!overrideReason) { setOverrideError("Must provide a reason for the audit log."); return; }
     setOverrideLoading(true);
+    setOverrideError('');
+    setOverrideSuccess('');
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/application/${id}/override`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ new_decision: newDecision, reason: overrideReason })
       });
       if (!res.ok) throw new Error('Override failed');
-      alert(`Successfully forced decision to ${newDecision}`);
+      setOverrideSuccess(`Successfully forced decision to ${newDecision}`);
       fetchAppDetails();
       setOverrideReason('');
     } catch (err) {
-      alert("Override failed: " + err.message);
+      setOverrideError("Override failed: " + err.message);
     } finally {
       setOverrideLoading(false);
     }

@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { Sidebar } from './Dashboard';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertTriangle, Lightbulb, Download } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Lightbulb, Download, Loader } from 'lucide-react';
 import ScoreMeter from '../../components/user/ScoreMeter';
+import { API_BASE_URL } from '../../config';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell 
 } from 'recharts';
 
 const Results = () => {
   const { state } = useLocation();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [data] = useState(() => {
+  const [data, setData] = useState(() => {
     if (state?.result) {
       return state.result.score_results;
     } else if (state?.mock) {
-      // Create mock data
       return {
         score: 75,
         decision: "Medium Risk",
@@ -36,14 +37,91 @@ const Results = () => {
     }
     return null;
   });
+  const [loading, setLoading] = useState(!state?.result && !state?.mock);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!data) {
-      navigate('/dashboard'); // nothing to show
-    }
-  }, [data, navigate]);
+    const fetchApplication = async () => {
+      if (data || state?.mock) return;
+      if (!id) {
+        navigate('/dashboard');
+        return;
+      }
 
-  if (!data) return <div className="app-container"><Sidebar current="apply"/></div>;
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/applications/${id}`, {
+          credentials: 'include'
+        });
+        if (!res.ok) {
+          if (res.status === 404) throw new Error('Application not found');
+          throw new Error('Unable to load application details');
+        }
+        const json = await res.json();
+        setData({
+          score: json.score,
+          decision: json.decision,
+          risk: json.risk_level,
+          loan: json.loan_suggestion,
+          tips: json.tips || [],
+          reasons: {
+            positive: [],
+            negative: json.flags ? [json.flags] : []
+          },
+          factors: json.factors || {},
+          income: json.income,
+          expenses: json.expenses,
+          savings: json.savings,
+          cibil_score: json.cibil_score
+        });
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplication();
+  }, [data, id, navigate, state?.mock]);
+
+  useEffect(() => {
+    if (!loading && !data && !error) {
+      navigate('/dashboard');
+    }
+  }, [loading, data, error, navigate]);
+
+  if (loading) {
+    return (
+      <div className="app-container">
+        <Sidebar current="history" />
+        <div style={{ flex: 1, padding: '40px', overflowY: 'auto', position: 'relative', zIndex: 10 }}>
+          <div className="glass-card" style={{ textAlign: 'center', padding: '80px' }}>
+            <Loader size={36} color="var(--brand-primary)" style={{ animation: 'spin 2s linear infinite', marginBottom: '16px' }} />
+            Loading application details...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="app-container">
+        <Sidebar current="history" />
+        <div style={{ flex: 1, padding: '40px', overflowY: 'auto', position: 'relative', zIndex: 10 }}>
+          <div className="glass-card" style={{ textAlign: 'center', padding: '60px' }}>
+            <h2 style={{ color: 'var(--status-error)' }}>Unable to load application</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>{error}</p>
+            <button onClick={() => navigate('/history')} className="btn-primary">Back to History</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
 
   const barData = [
     { label: "Income Stability", val: data.factors?.income_score || 0, max: 30 },

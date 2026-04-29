@@ -16,6 +16,14 @@ class OverrideRequest(BaseModel):
     new_decision: str # "Approved" or "Rejected"
     reason: str
 
+class TrustworthyPersonRequest(BaseModel):
+    name: str
+    occupation: str
+    location: str
+    testimonial: str
+    rating: int = 5
+    is_featured: bool = True
+
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 @router.get("/stats")
@@ -174,3 +182,60 @@ def override_decision(app_id: int, req: OverrideRequest, db: Session = Depends(g
     db.commit()
     
     return {"success": True, "message": "Application decision overridden successfully"}
+
+# Trustworthy People Management Routes
+@router.get("/trustworthy-people")
+def get_trustworthy_people(db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    people = db.query(models.TrustworthyPerson).order_by(models.TrustworthyPerson.created_at.desc()).all()
+    return [{
+        "id": p.id,
+        "name": p.name,
+        "occupation": p.occupation,
+        "location": p.location,
+        "testimonial": p.testimonial,
+        "rating": p.rating,
+        "is_featured": p.is_featured,
+        "created_at": p.created_at,
+        "updated_at": p.updated_at
+    } for p in people]
+
+@router.post("/trustworthy-people")
+def create_trustworthy_person(req: TrustworthyPersonRequest, db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    person = models.TrustworthyPerson(
+        name=req.name,
+        occupation=req.occupation,
+        location=req.location,
+        testimonial=req.testimonial,
+        rating=req.rating,
+        is_featured=req.is_featured
+    )
+    db.add(person)
+    db.commit()
+    db.refresh(person)
+    return {"success": True, "message": "Trustworthy person added successfully", "id": person.id}
+
+@router.put("/trustworthy-people/{person_id}")
+def update_trustworthy_person(person_id: str, req: TrustworthyPersonRequest, db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    person = db.query(models.TrustworthyPerson).filter(models.TrustworthyPerson.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Trustworthy person not found")
+    
+    person.name = req.name
+    person.occupation = req.occupation
+    person.location = req.location
+    person.testimonial = req.testimonial
+    person.rating = req.rating
+    person.is_featured = req.is_featured
+    
+    db.commit()
+    return {"success": True, "message": "Trustworthy person updated successfully"}
+
+@router.delete("/trustworthy-people/{person_id}")
+def delete_trustworthy_person(person_id: str, db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    person = db.query(models.TrustworthyPerson).filter(models.TrustworthyPerson.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Trustworthy person not found")
+    
+    db.delete(person)
+    db.commit()
+    return {"success": True, "message": "Trustworthy person deleted successfully"}
