@@ -1,16 +1,77 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Brain, Zap, Clock, TrendingUp, ChevronRight, Activity, CreditCard, User, CheckCircle, Lock, Smartphone, LineChart, Users, Award, PhoneCall, Mail, Menu, X } from 'lucide-react';
+import { ShieldCheck, Brain, Zap, Clock, TrendingUp, ChevronRight, Activity, CreditCard, User, CheckCircle, Lock, Smartphone, LineChart, Users, Award, PhoneCall, Mail, Menu, X, RefreshCw } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const Landing = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [trustedPeople, setTrustedPeople] = useState([]);
+  const [peopleLoading, setPeopleLoading] = useState(true);
+  const [peopleError, setPeopleError] = useState(null);
+
+  const defaultTrustedPeople = [
+    {
+      id: 1,
+      name: 'Arjun Patel',
+      role: 'Delivery Partner',
+      location: 'Mumbai',
+      quote: "No bank would give me a loan because I don't have a salary slip. CreditBridge looked at my UPI transactions and approved ₹50,000 for my new delivery bike in 5 minutes.",
+      rating: 5.0,
+      badge: 'Verified User'
+    },
+    {
+      id: 2,
+      name: 'Meena Devi',
+      role: 'Street Vendor',
+      location: 'Delhi',
+      quote: 'The digital KYC was so easy. I just linked my bank account, and the AI calculated my score instantly. I got the working capital I needed to expand my street food stall.',
+      rating: 4.9,
+      badge: 'Trusted Partner'
+    },
+    {
+      id: 3,
+      name: 'Priya Sharma',
+      role: 'Freelancer',
+      location: 'Bangalore',
+      quote: 'CreditBridge connected me to the right loan without waiting weeks. Their fintech engine made everything transparent and fast.',
+      rating: 4.8,
+      badge: 'Customer Favorite'
+    }
+  ];
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const fetchTrustedPeople = async () => {
+    try {
+      setPeopleLoading(true);
+      setPeopleError(null);
+      const response = await fetch(`${API_BASE_URL}/api/applications/trustworthy-people`);
+      if (!response.ok) {
+        throw new Error('Failed to load trusted people');
+      }
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setTrustedPeople(data);
+      } else {
+        setTrustedPeople(defaultTrustedPeople);
+      }
+    } catch (error) {
+      console.error(error);
+      setPeopleError('Could not load trusted customer stories.');
+      setTrustedPeople(defaultTrustedPeople);
+    } finally {
+      setPeopleLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrustedPeople();
   }, []);
 
   return (
@@ -260,38 +321,45 @@ const Landing = () => {
       {/* Testimonials Section */}
       <section id="testimonials" style={{ padding: '80px 5%', position: 'relative', zIndex: 10, maxWidth: '1200px', margin: '0 auto', scrollMarginTop: '80px' }}>
         <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-          <h2 style={{ fontSize: '3rem', marginBottom: '16px' }}>Real Stories, <span className="text-gradient">Real Impact</span></h2>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: '3rem', marginBottom: '16px' }}>Real Stories, <span className="text-gradient">Real Impact</span></h2>
+            <button
+              onClick={fetchTrustedPeople}
+              disabled={peopleLoading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: 'white', padding: '10px 18px', borderRadius: '999px', cursor: peopleLoading ? 'not-allowed' : 'pointer' }}
+            >
+              <RefreshCw size={16} style={{ transform: peopleLoading ? 'rotate(90deg)' : 'none', transition: 'transform 0.3s ease' }} />
+              {peopleLoading ? 'Refreshing...' : 'Refresh Stories'}
+            </button>
+          </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>See how we are transforming the lives of informal workers across India.</p>
+          {peopleLoading && <p style={{ color: 'var(--text-secondary)', marginTop: '12px' }}>Loading trusted people...</p>}
+          {peopleError && <p style={{ color: '#f87171', marginTop: '12px' }}>{peopleError}</p>}
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
-          <motion.div whileHover={{ y: -10 }} className="glass-card" style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', gap: '4px', color: '#f59e0b', marginBottom: '16px' }}>
-               {[...Array(5)].map((_, i) => <svg key={i} width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}
-            </div>
-            <p style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>"No bank would give me a loan because I don't have a salary slip. CreditBridge looked at my UPI transactions and approved ₹50,000 for my new delivery bike in 5 minutes."</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>A</div>
-               <div>
-                 <div style={{ fontWeight: 600 }}>Arjun Patel</div>
-                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Delivery Partner, Mumbai</div>
-               </div>
-            </div>
-          </motion.div>
-
-          <motion.div whileHover={{ y: -10 }} className="glass-card" style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', gap: '4px', color: '#f59e0b', marginBottom: '16px' }}>
-               {[...Array(5)].map((_, i) => <svg key={i} width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}
-            </div>
-            <p style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>"The digital KYC was so easy. I just linked my bank account, and the AI calculated my score instantly. I got the working capital I needed to expand my street food stall."</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--status-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>M</div>
-               <div>
-                 <div style={{ fontWeight: 600 }}>Meena Devi</div>
-                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Street Vendor, Delhi</div>
-               </div>
-            </div>
-          </motion.div>
+          {(trustedPeople.length > 0 ? trustedPeople : defaultTrustedPeople).map((person) => (
+            <motion.div key={person.id} whileHover={{ y: -10 }} className="glass-card" style={{ padding: '30px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', gap: '4px', color: '#f59e0b' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                  ))}
+                </div>
+                {person.rating != null && (
+                  <span style={{ fontWeight: 700, color: '#fbbf24' }}>{person.rating.toFixed(1)}★</span>
+                )}
+              </div>
+              <p style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>{person.quote}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{person.name?.charAt(0) || '?'}</div>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{person.name}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{person.role}{person.location ? `, ${person.location}` : ''}</div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 

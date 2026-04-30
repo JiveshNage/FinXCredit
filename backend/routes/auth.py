@@ -29,10 +29,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class SignupInitiate(BaseModel):
     name: str
     email: EmailStr
-    phone: str
-    place: str = "Not specified"
     password: str
-    worker_type: str = "salaried"
+    worker_type: str = "Freelancer"
 
 class VerifyOTPRequest(BaseModel):
     identifier: str # email or phone
@@ -55,21 +53,19 @@ class ResendOTPRequest(BaseModel):
 @router.post("/signup/initiate")
 @limiter.limit("5/minute")
 def signup_initiate(request: Request, req: SignupInitiate, db: Session = Depends(get_db)):
-    # Check if exists
-    existing = db.query(models.User).filter(
-        (models.User.email == req.email) | (models.User.phone == req.phone)
-    ).first()
+    # Check if email exists
+    existing = db.query(models.User).filter(models.User.email == req.email).first()
     
     if existing:
-        raise HTTPException(status_code=400, detail="Email or phone already registered")
+        raise HTTPException(status_code=400, detail="Email already registered")
         
     password_hash = pwd_context.hash(req.password)
     
     new_user = models.User(
         name=req.name,
         email=req.email,
-        phone=req.phone,
-        place=req.place,
+        phone="",  # Empty phone for now, will be set later if needed
+        place="Not specified",
         password_hash=password_hash,
         worker_type=req.worker_type,
         status="pending_verification"

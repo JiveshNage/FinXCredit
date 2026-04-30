@@ -73,6 +73,24 @@ def simulate_scoring(data: SimulationInput):
     }
     score_results = calculate_score(score_inputs)
     return score_results
+
+@router.get("/trustworthy-people")
+def get_trustworthy_people(db: Session = Depends(get_db)):
+    people = db.query(models.TrustworthyPerson).order_by(models.TrustworthyPerson.id.asc()).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "role": p.role,
+            "location": p.location,
+            "quote": p.quote,
+            "rating": p.rating,
+            "badge": p.badge,
+            "created_at": p.created_at
+        }
+        for p in people
+    ]
+
 class PanSubmit(BaseModel):
     pan_number: str
 
