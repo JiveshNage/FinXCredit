@@ -12,3 +12,7 @@ loans.db
 .env.*.local
 backend/.env
 frontend/.env
+
+# Firebase service account keys
+backend/*.json
+*firebase-adminsdk*.json
