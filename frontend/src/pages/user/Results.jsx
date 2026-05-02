@@ -54,8 +54,21 @@ const Results = () => {
           credentials: 'include'
         });
         if (!res.ok) {
+          let detail = 'Unable to load application details';
+          const contentType = res.headers.get('content-type') || '';
+          try {
+            if (contentType.includes('application/json')) {
+              const json = await res.json();
+              detail = json.detail || json.message || detail;
+            } else {
+              const text = await res.text();
+              detail = text || detail;
+            }
+          } catch (_err) {
+            detail = `${detail} (${res.status} ${res.statusText})`;
+          }
           if (res.status === 404) throw new Error('Application not found');
-          throw new Error('Unable to load application details');
+          throw new Error(detail);
         }
         const json = await res.json();
         setData({

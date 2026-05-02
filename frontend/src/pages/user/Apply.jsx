@@ -45,9 +45,13 @@ const Apply = () => {
     formData.append("file", panFile);
     
     try {
+      const headers = {};
+      const storedToken = localStorage.getItem('access_token');
+      if (storedToken) headers.Authorization = `Bearer ${storedToken}`;
       const res = await fetch(`${API_BASE_URL}/api/applications/upload/pan`, {
         method: 'POST',
         credentials: 'include',
+        headers,
         body: formData
       });
       if (!res.ok) throw new Error((await res.json()).detail || "PAN OCR Verification Failed");
@@ -66,9 +70,13 @@ const Apply = () => {
     formData.append("file", aadhaarFile);
     
     try {
+      const headers = {};
+      const storedToken = localStorage.getItem('access_token');
+      if (storedToken) headers.Authorization = `Bearer ${storedToken}`;
       const res = await fetch(`${API_BASE_URL}/api/applications/upload/aadhaar`, {
         method: 'POST',
         credentials: 'include',
+        headers,
         body: formData
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Aadhaar XML Verification Failed");
@@ -84,6 +92,20 @@ const Apply = () => {
     }
     setStep(4);
   }
+
+  const parseApiError = async (res, fallback) => {
+    const contentType = res.headers.get('content-type') || '';
+    try {
+      if (contentType.includes('application/json')) {
+        const json = await res.json();
+        return json.detail || json.message || fallback;
+      }
+      const text = await res.text();
+      return text ? text : `${fallback} (${res.status} ${res.statusText})`;
+    } catch (_) {
+      return `${fallback} (${res.status} ${res.statusText})`;
+    }
+  };
 
   const handleFinalSubmit = async (e) => {
     e.preventDefault();
@@ -106,20 +128,29 @@ const Apply = () => {
       const formData = new FormData();
       formData.append("file", bankFile);
       
+      const token = localStorage.getItem('access_token');
+      const headers = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
       let res = await fetch(`${API_BASE_URL}/api/applications/upload/bank`, {
         method: 'POST',
         credentials: 'include',
+        headers,
         body: formData
       });
-      if (!res.ok) throw new Error((await res.json()).detail || "Bank statement parsing failed");
+      if (!res.ok) {
+        const msg = await parseApiError(res, "Bank statement parsing failed");
+        throw new Error(msg);
+      }
       
       setLoadingText("Running ML Discrepancy & Eligibility Models...");
       
       // 2. Submit Application (with declared financials)
+      const calcHeaders = { 'Content-Type': 'application/json' };
+      if (token) calcHeaders.Authorization = `Bearer ${token}`;
       res = await fetch(`${API_BASE_URL}/api/applications/calculate`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: calcHeaders,
         body: JSON.stringify({ 
             consent_aa: true, 
             consent_cibil: true,
@@ -128,12 +159,15 @@ const Apply = () => {
         })
       });
       
-      if (!res.ok) throw new Error((await res.json()).detail || "Eligibility Check Failed");
+      if (!res.ok) {
+        const msg = await parseApiError(res, "Eligibility Check Failed");
+        throw new Error(msg);
+      }
       
       const data = await res.json();
       setTimeout(() => navigate(`/results/${data.application_id}`), 2000);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong during calculation.");
       setLoading(false);
     }
   };

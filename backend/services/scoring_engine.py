@@ -107,28 +107,29 @@ def calculate_score(data_dict):
     # 1. INCOME STABILITY
     total_in_out = income + expenses
     income_ratio = income / total_in_out if total_in_out > 0 else 0
-    income_score = clamp(income_ratio * 100, 0, 100) * w_income * 100
+    income_score = clamp(income_ratio * 100, 0, 100) * w_income
 
     # 2. TRANSACTION ACTIVITY
-    txn_score = clamp(transactions / 150 * 100, 0, 100) * w_txn * 100
-    if upi_freq: 
+    txn_score = clamp(transactions / 150 * 100, 0, 100) * w_txn
+    if upi_freq:
         txn_score += min(upi_freq / 200 * 5, 5)
+    txn_score = clamp(txn_score, 0, 100)
 
     # 3. SAVINGS RATIO
     savings_ratio = savings / max(income, 1)
-    savings_score = clamp(savings_ratio * 200, 0, 100) * w_savings * 100
+    savings_score = clamp(savings_ratio * 200, 0, 100) * w_savings
 
     # 4. SPENDING BEHAVIOR
     expense_ratio = expenses / max(income, 1)
-    spending_score = clamp((1 - expense_ratio) * 100, 0, 100) * w_spending * 100
+    spending_score = clamp((1 - expense_ratio) * 100, 0, 100) * w_spending
 
     # 5. FINANCIAL DISCIPLINE
     discipline = 50
     if loan_history:
         discipline += 20
-    bill_map = {"always_on_time": 30, "sometimes_late": 10, "Usually": 20, "Always": 30, "Rarely": 0}
+    bill_map = {"Always": 30, "Usually": 20, "Sometimes": 10, "Rarely": 0}
     discipline += bill_map.get(bill_regularity, 0)
-    discipline_score = clamp(discipline, 0, 100) * w_discipline * 100
+    discipline_score = clamp(discipline, 0, 100) * w_discipline
 
     final_score = income_score + txn_score + savings_score + spending_score + discipline_score
     final_score = round(clamp(final_score, 0, 100), 1)

@@ -28,24 +28,21 @@ const Login = () => {
         credentials: 'include',
         body: JSON.stringify({ email, password })
       });
-      if (!res.ok) throw new Error("Invalid credentials");
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || 'Invalid credentials');
+      }
       
       if (data.requires2FA) {
         setStep(2);
       } else {
-        login(data.user);
+        login(data.user, data.access_token);
         if (data.user.role === 'admin') navigate('/admin');
         else navigate('/dashboard');
       }
     } catch (err) {
       console.error(err);
-      setError("Failed to sign in. Please check your credentials.");
-      // Fallback for offline dev
-      if (email && password) {
-         login({ name: email.split('@')[0], email, role: email.includes('admin')?'admin':'user' }, {});
-         navigate(email.includes('admin') ? '/admin' : '/dashboard');
-      }
+      setError(err.message || "Failed to sign in. Please check your credentials.");
     }
     setLoading(false);
   };
@@ -116,13 +113,14 @@ const Login = () => {
                     
                     const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
                        method: 'POST',
+                       credentials: 'include',
                        headers: { 'Content-Type': 'application/json' },
                        body: JSON.stringify({ token: idToken })
                     });
                     
                     if (!res.ok) throw new Error("Sign in failed");
                     const data = await res.json();
-                    login(data.user);
+                    login(data.user, data.access_token);
                     navigate('/dashboard');
                   } catch (err) {
                     console.error(err);

@@ -4,13 +4,25 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from passlib.context import CryptContext
 import re
+import os
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+service_account_file = os.getenv(
+    "FIREBASE_SERVICE_ACCOUNT_FILE",
+    os.path.join(BASE_DIR, "finx-6563d-firebase-adminsdk-fbsvc-85d2e0617a.json")
+)
+if not os.path.isabs(service_account_file):
+    service_account_file = os.path.join(BASE_DIR, service_account_file)
+
 try:
     if not firebase_admin._apps:
-        cred = credentials.Certificate("firebase-service-account.json")
-        firebase_admin.initialize_app(cred)
+        if os.path.exists(service_account_file):
+            cred = credentials.Certificate(service_account_file)
+            firebase_admin.initialize_app(cred)
+        else:
+            raise FileNotFoundError(f"Firebase service account file not found: {service_account_file}")
 except Exception as e:
     print(f"Warning: Firebase Admin SDK not initialized. Google Sign-In will fail. Error: {e}")
 import models
@@ -21,6 +33,15 @@ from utils.limiter import limiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _use_secure_cookies(request: Request) -> bool:
+    secure_setting = os.getenv("COOKIE_SECURE", "auto").strip().lower()
+    if secure_setting in {"true", "1", "yes"}:
+        return True
+    if secure_setting in {"false", "0", "no"}:
+        return False
+    return request.url.scheme == "https"
 
 # -----------------
 # Pydantic Schemas
@@ -57,6 +78,15 @@ def signup_initiate(request: Request, req: SignupInitiate, db: Session = Depends
     existing = db.query(models.User).filter(models.User.email == req.email).first()
     
     if existing:
+        if existing.status == "pending_verification":
+            # Resend OTP for pending signups.
+            existing.name = req.name or existing.name
+            existing.worker_type = req.worker_type or existing.worker_type
+            if not pwd_context.verify(req.password, existing.password_hash):
+                existing.password_hash = pwd_context.hash(req.password)
+            db.commit()
+            res = generate_and_send_otp(db, identifier=req.email, purpose="signup", channel="email", user_id=existing.id)
+            return {"message": "OTP resent", "channel": "email", "resent": True}
         raise HTTPException(status_code=400, detail="Email already registered")
         
     password_hash = pwd_context.hash(req.password)
@@ -98,9 +128,10 @@ def signup_verify_otp(request: Request, response: Response, req: VerifyOTPReques
         access_token = create_access_token({"id": user.id, "role": user.role})
         refresh_token = create_refresh_token({"id": user.id})
         
-        # Set HttpOnly Cookies
-        response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax")
-        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax")
+        # Set HttpOnly Cookies for cross-site frontend requests
+        secure_cookie = _use_secure_cookies(request)
+        response.set_cookie(key="access_token", value=access_token, httponly=True, secure=secure_cookie, samesite="none")
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=secure_cookie, samesite="none")
         
         return {
             "message": "Verified successfully",
@@ -136,9 +167,10 @@ def signin(request: Request, response: Response, req: SigninRequest, db: Session
     access_token = create_access_token({"id": user.id, "role": user.role})
     refresh_token = create_refresh_token({"id": user.id})
     
-    # Set HttpOnly Cookies
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax")
+    # Set HttpOnly Cookies for cross-site frontend requests
+    secure_cookie = _use_secure_cookies(request)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=secure_cookie, samesite="none")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=secure_cookie, samesite="none")
     
     return {
         "message": "Sign In successful",
@@ -160,6 +192,8 @@ class GoogleSigninRequest(BaseModel):
 @router.post("/google")
 @limiter.limit("5/minute")
 def signin_google(request: Request, response: Response, req: GoogleSigninRequest, db: Session = Depends(get_db)):
+    if not firebase_admin._apps:
+        raise HTTPException(status_code=503, detail="Firebase Admin SDK is not initialized. Google sign-in is unavailable.")
     try:
         decoded_token = firebase_auth.verify_id_token(req.token)
         email = decoded_token.get("email")
@@ -188,9 +222,10 @@ def signin_google(request: Request, response: Response, req: GoogleSigninRequest
     access_token = create_access_token({"id": user.id, "role": user.role})
     refresh_token = create_refresh_token({"id": user.id})
     
-    # Set HttpOnly Cookies
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax")
+    # Set HttpOnly Cookies for cross-site frontend requests
+    secure_cookie = _use_secure_cookies(request)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=secure_cookie, samesite="none")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=secure_cookie, samesite="none")
     
     return {
         "message": "Google Sign In successful",

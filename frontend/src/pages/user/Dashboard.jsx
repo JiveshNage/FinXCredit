@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, FileText, CheckCircle, Sliders, User as UserIcon, LogOut, 
-  Search, Bell, Plus, TrendingUp, TrendingDown, Activity, ArrowRight, Loader, Lightbulb, Menu, X, Zap
+  Search, Bell, Plus, TrendingUp, TrendingDown, Activity, ArrowRight, Loader, Lightbulb, Menu, X, Zap, Wallet
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { API_BASE_URL } from '../../config';

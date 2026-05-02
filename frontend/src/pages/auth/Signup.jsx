@@ -86,13 +86,15 @@ const Signup = () => {
         credentials: 'include',
         body: JSON.stringify({ identifier: formData.email, otp: otpCode, purpose: 'signup' })
       });
-      if (!res.ok) throw new Error("Invalid OTP");
       const data = await res.json();
-      login(data.user);
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || 'Invalid OTP');
+      }
+      login(data.user, data.access_token);
       nextStep(); // Move to profile completion
     } catch (err) {
       console.error(err);
-      setError("Incorrect code. Please try again.");
+      setError(err.message || "Incorrect code. Please try again.");
     }
     setLoading(false);
   };
