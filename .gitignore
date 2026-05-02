@@ -5,3 +5,10 @@ frontend/node_modules/
 loans.db
 *.pkl
 .DS_Store
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
